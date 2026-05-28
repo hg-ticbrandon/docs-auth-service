@@ -1,0 +1,60 @@
+---
+title: HAGEMSA Auth Service
+description: Servicio de autenticación y autorización centralizado de Transportes HAGEMSA SAC.
+template: splash
+hero:
+  tagline: Identidad, credenciales, sesiones, roles y auditoría — un solo lugar para todo el ecosistema HAGEMSA.
+  actions:
+    - text: Integrar mi backend
+      link: /integracion/vision-general/
+      icon: right-arrow
+    - text: Ver API Reference
+      link: /api-reference/api/auth/
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Por dónde empezar
+
+<CardGrid stagger>
+  <Card title="Integrar un backend" icon="puzzle">
+    Conecta tu backend NestJS al Auth Service vía la librería
+    `@hagemsa/auth-guard`: instalación, decoradores, scopes y revocación.
+    [Ir →](/integracion/vision-general/)
+  </Card>
+  <Card title="API Reference" icon="document">
+    Documentación de los ~30 endpoints HTTP: parámetros, ejemplos
+    request/response, códigos de error.
+    [Ir →](/api-reference/api/auth/)
+  </Card>
+  <Card title="Arquitectura" icon="setting">
+    Bounded contexts, capas DDD, patrones (CQRS, Result, Hexagonal),
+    modelo de datos y decisiones de seguridad.
+    [Ir →](/arquitectura/vision-general/)
+  </Card>
+  <Card title="Operaciones" icon="rocket">
+    Setup de GCP, Secret Manager, Cloud SQL, Cloud Run. Troubleshooting
+    y runbooks para incidentes.
+    [Ir →](/operaciones/setup-gcp/)
+  </Card>
+</CardGrid>
+
+## Qué hace este servicio
+
+El Auth Service es la fuente única de verdad para:
+
+- **Identidad** — quién es cada cuenta (usuario interno, cliente, proveedor).
+- **Credenciales** — passwords con Argon2id, política de bloqueo, reset por email.
+- **Sesiones** — JWT firmados con RS256, refresh tokens con rotación y detección de reuso.
+- **Autorización** — roles, permisos finos y scopes (ej. `almacenId: 'lima-1'`).
+- **Auditoría** — log append-only de eventos sensibles.
+
+Cualquier backend de HAGEMSA (WMS, despachos, facturación, etc.) consume al Auth Service vía JWT firmado + la librería `@hagemsa/auth-guard` que valida firma, permisos y scopes.
+
+## Versión y estado
+
+- **Versión actual:** v0.1.0
+- **Estado:** Listo para producción en GCP (Cloud Run + Cloud SQL).
+- **Stack:** NestJS 11 · Prisma 7 · PostgreSQL 16 · pnpm 11.
