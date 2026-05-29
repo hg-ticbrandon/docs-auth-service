@@ -5,6 +5,42 @@ description: Decoradores de @hagemsa/auth-guard para controlar acceso por endpoi
 
 Con `JwtAuthGuard` registrado globalmente, **todos los endpoints exigen un JWT válido por default**. Solo los que marques con `@Public()` quedan abiertos.
 
+## Principio: protegé por PERMISO, nunca por ROL
+
+Este es el concepto central de RBAC y la regla más importante de esta página:
+
+> Un endpoint declara la **capacidad** que requiere (ej. `wms:inventario:read`),
+> **nunca un nombre de rol**. El guard verifica que alguno de los roles del JWT
+> conceda ese permiso, sin importar cuál.
+
+Los **roles son solo "bolsas de permisos"** que viven en el Auth Service (catálogo
+en el seed, editables vía `/api/admin/roles`). Tu backend no los conoce ni debe
+conocerlos.
+
+**Por qué nunca hardcodear un rol en el endpoint:**
+
+- **Desacople:** si mañana se crea un rol nuevo (`SUPERVISOR_WMS`) y se le da
+  `wms:inventario:read`, entra al endpoint **sin tocar ni redeployar tu backend**.
+  Si protegieras por rol, cada rol nuevo sería un cambio de código.
+- **Muchos roles → un permiso:** `wms:inventario:read` puede concederlo
+  SUPER_ADMIN, GERENTE, JEFE_ALMACEN y ALMACENERO a la vez. Enumerar roles en el
+  endpoint sería frágil y redundante.
+- **Fuente de verdad única:** el mapeo rol→permiso lo administra el Auth Service,
+  no se reparte por cada backend.
+
+> **"¿Qué roles pueden entrar a este endpoint?"** No se responde desde el código
+> del consumidor (a propósito): se consulta el catálogo del Auth Service
+> (`GET /api/admin/roles/:id` o el seed). Hardcodear esa lista quedaría
+> desactualizado en cuanto un admin ajuste los permisos de un rol.
+
+```typescript
+// ✓ Correcto: declara la capacidad
+@RequirePermission('wms:inventario:read')
+
+// ✗ Incorrecto: la lib no tiene un @RequireRole, y no debería —
+//   acoplaría el backend a nombres de rol que cambian en runtime.
+```
+
 ## @Public
 
 Endpoint accesible sin JWT (health, webhooks externos verificados por otro mecanismo, login del propio servicio, etc.).

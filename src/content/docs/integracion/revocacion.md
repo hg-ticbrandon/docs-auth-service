@@ -64,6 +64,38 @@ POST /api/admin/sesiones/:id/revocar              # revocar una específica
 
 Para revocar todas, repetir el POST por cada sesión activa.
 
+## Cómo activar la blacklist
+
+Por default está **desactivada** (`enableBlacklistCheck: false`). Para activarla,
+en tu `AuthGuardModule.forRoot({...})` necesitás **tres** cosas juntas — no alcanza
+con la flag sola:
+
+```typescript
+AuthGuardModule.forRoot({
+  jwksUrl: process.env.AUTH_JWKS_URL!,
+  issuer: process.env.AUTH_JWT_ISSUER!,
+  audience: process.env.AUTH_JWT_AUDIENCE!,
+
+  // 1. Prende el chequeo de blacklist en cada request.
+  enableBlacklistCheck: true,
+  // 2. URL base del Auth Service (para llamar a /api/internal/jti/:jti/revoked).
+  authServiceUrl: process.env.AUTH_SERVICE_URL!,
+  // 3. Shared secret; el endpoint interno lo exige. Debe coincidir con
+  //    INTERNAL_SHARED_SECRET del Auth Service.
+  internalSecret: process.env.AUTH_INTERNAL_SECRET!,
+}),
+```
+
+> Si activás `enableBlacklistCheck` pero **olvidás `authServiceUrl` o
+> `internalSecret`**, el endpoint interno responde 401 y —por fail-closed— tu
+> backend rechaza **todos** los requests con 401. Las tres opciones van juntas.
+
+Variables de entorno asociadas (ver [Instalación](/integracion/instalacion/#2-variables-de-entorno)):
+`AUTH_SERVICE_URL`, `AUTH_INTERNAL_SECRET`. El secret lo provee el equipo de
+plataforma y en producción vive en Secret Manager.
+
+Detalle completo de cada opción en [Configuración](/integracion/configuracion/).
+
 ## Cuándo NO usar blacklist
 
 Si tu backend prioriza latencia/simplicidad (validación 100% local, sin fetch al Auth Service) y aceptás que un logout tarde hasta el TTL del access token en surtir efecto, podés saltarte la blacklist:
