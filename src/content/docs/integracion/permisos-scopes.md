@@ -30,7 +30,10 @@ auth:role:assign
 
 ## Catálogo de permisos
 
-Cada permiso vive en la tabla `authorization.permissions` del Auth Service. Solo el equipo del Auth Service (vía el seed o `/api/admin/permisos`) puede agregar nuevos códigos.
+Cada permiso vive en la tabla `authorization.permissions` del Auth Service y se
+administra en runtime con `POST /api/admin/permisos` (o desde la UI admin del
+frontend) por cuentas con el permiso `auth:role:manage`. El `prisma/seed.ts` solo
+provee un catálogo base por default; no es la fuente de verdad.
 
 **Antes de usar un permiso nuevo en tu backend, coordiná con el equipo de plataforma para crearlo.**
 

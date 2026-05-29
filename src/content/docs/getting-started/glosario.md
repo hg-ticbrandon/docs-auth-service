@@ -65,7 +65,10 @@ Ejemplos de permisos de **otros módulos** del ecosistema (también en el catál
 | `wms:despacho:write` | Registrar despacho |
 | `facturacion:emitir` | Emitir facturas |
 
-El catálogo completo (40 permisos) se siembra al deploy inicial (ver `prisma/seed.ts`).
+El `prisma/seed.ts` siembra un catálogo base por default (40 permisos) en el deploy
+inicial, pero **no es la fuente de verdad**: roles y permisos se administran en
+runtime desde la base del Auth Service vía `/api/admin/roles` y `/api/admin/permisos`
+(hay UI de administración en el frontend).
 
 ## Tipos de evento de auditoría
 

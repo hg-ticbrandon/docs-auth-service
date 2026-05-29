@@ -13,9 +13,14 @@ Este es el concepto central de RBAC y la regla más importante de esta página:
 > **nunca un nombre de rol**. El guard verifica que alguno de los roles del JWT
 > conceda ese permiso, sin importar cuál.
 
-Los **roles son solo "bolsas de permisos"** que viven en el Auth Service (catálogo
-en el seed, editables vía `/api/admin/roles`). Tu backend no los conoce ni debe
-conocerlos.
+Los **roles son solo "bolsas de permisos"** que viven en la **base de datos del
+Auth Service** y se administran **en runtime**: crear/editar/eliminar roles,
+agregar o quitar permisos, y asignar roles con scope a las cuentas, todo vía los
+endpoints `/api/admin/roles`, `/api/admin/permisos` y `/api/admin/cuentas/:id/roles`
+— el frontend ya tiene una UI de administración completa para esto (roles,
+usuarios, permisos, scopes). El `prisma/seed.ts` solo siembra un **template
+inicial por default**; **no** es "el catálogo". Tu backend consumidor no los
+conoce ni debe conocerlos.
 
 **Por qué nunca hardcodear un rol en el endpoint:**
 
@@ -29,9 +34,10 @@ conocerlos.
   no se reparte por cada backend.
 
 > **"¿Qué roles pueden entrar a este endpoint?"** No se responde desde el código
-> del consumidor (a propósito): se consulta el catálogo del Auth Service
-> (`GET /api/admin/roles/:id` o el seed). Hardcodear esa lista quedaría
-> desactualizado en cuanto un admin ajuste los permisos de un rol.
+> del consumidor (a propósito): se consulta el Auth Service —
+> `GET /api/admin/roles/:id` o la UI de administración del frontend. Como roles,
+> permisos y asignaciones se crean y editan en runtime, hardcodear esa lista en
+> tu backend quedaría desactualizado apenas un admin ajuste algo.
 
 ```typescript
 // ✓ Correcto: declara la capacidad
