@@ -83,13 +83,40 @@ Cloud SQL acepta passwords con estos caracteres, pero te van a complicar todo el
 
 ## 4. Internal shared secret
 
+Este secreto viaja como header HTTP `X-Internal-Secret` y se compara **byte-exacto**
+(timing-safe, sin trim) en el Auth Service. Por eso **NO puede tener un salto de
+línea final** ni espacios: un header HTTP no puede contener `\r`/`\n`, y un byte
+de más rompe la comparación → todos los consumidores recibirían 401.
+
 ```bash
-openssl rand -base64 32 > /tmp/secret.txt
-gcloud secrets create internal-shared-secret --data-file=/tmp/secret.txt
-rm /tmp/secret.txt
+# Generar SIN newline final (tr -d '\n'). NUNCA `openssl ... > archivo` ni `echo`,
+# que dejan un \n y rompen la comparación byte-exacta.
+openssl rand -hex 32 | tr -d '\n' | \
+  gcloud secrets create internal-shared-secret --data-file=- --project=hagemsa-cloud
 ```
 
-> **Compartir este secreto** con cada backend que vaya a usar `@hagemsa/auth-guard` con `enableBlacklistCheck: true`. En sus deploys, va como env `AUTH_INTERNAL_SECRET` (también desde Secret Manager).
+:::danger[No metas un newline en este secreto]
+`openssl rand -base64 32 > archivo` y `echo "valor" | gcloud ...` agregan un `\n`
+final (en Windows, `\r\n`). Como el valor se manda en un header HTTP y se compara
+byte-exacto, ese newline hace que **ningún backend pueda autenticarse** a
+`/api/internal/*` (la blacklist queda inutilizable). Usá siempre `printf '%s'` o
+`| tr -d '\n'` y verificá con `gcloud secrets versions access latest --secret=internal-shared-secret | xxd | tail -1` que NO termine en `0d`/`0a`.
+:::
+
+### Cómo OBTENER el valor (para compartirlo con un backend)
+
+Quien tenga rol `roles/secretmanager.secretAccessor` sobre el secreto:
+
+```bash
+gcloud secrets versions access latest \
+  --secret=internal-shared-secret --project=hagemsa-cloud
+```
+
+> **Compartir este secreto** con cada backend que vaya a usar `@hagemsa/auth-guard`
+> con `enableBlacklistCheck: true`. En sus deploys va como env `AUTH_INTERNAL_SECRET`
+> (idealmente también desde Secret Manager, no en texto plano). Los devs que solo
+> integran un backend normalmente **lo piden al equipo de plataforma** en vez de
+> tener acceso directo al secreto.
 
 ## 5. SendGrid (opcional)
 

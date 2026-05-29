@@ -75,26 +75,32 @@ Más complicado porque requiere coordinación con todos los backends que lo cons
 
 **Pasos:**
 
-1. **Generar nuevo secret:**
+1. **Generar y subir el nuevo secret SIN newline final** (en un solo paso, sin
+   archivo temporal que pueda quedar con `\n`):
    ```bash
-   openssl rand -base64 32 > /tmp/new-secret.txt
+   openssl rand -hex 32 | tr -d '\n' | \
+     gcloud secrets versions add internal-shared-secret --data-file=- --project=hagemsa-cloud
    ```
+   :::danger[Nunca con newline]
+   NO uses `openssl ... > archivo` ni `echo` para este secreto: dejan un `\n`
+   final (en Windows `\r\n`) que, al viajar en el header `X-Internal-Secret`
+   (comparado byte-exacto), hace que **todos** los consumidores reciban 401.
+   Verificá: `gcloud secrets versions access latest --secret=internal-shared-secret | xxd | tail -1` no debe terminar en `0d`/`0a`.
+   :::
 2. **Coordinar ventana de cambio** con todos los equipos de backends.
-3. **Subir nueva versión** del secret en GCP:
-   ```bash
-   gcloud secrets versions add internal-shared-secret --data-file=/tmp/new-secret.txt
-   ```
-4. **Cada equipo de backend:**
-   - Actualiza su Secret Manager con el nuevo valor.
+3. **Cada equipo de backend:**
+   - Actualiza su Secret Manager con el nuevo valor (obtenerlo con
+     `gcloud secrets versions access latest --secret=internal-shared-secret`).
    - Redeploya su servicio.
+4. **Redeploy del Auth Service** para que cargue la nueva versión. Como el binding
+   usa `:latest`, una revisión nueva la toma:
+   ```bash
+   gcloud run services update auth-service --region=us-central1 \
+     --update-secrets=INTERNAL_SHARED_SECRET=internal-shared-secret:latest
+   ```
 5. **Deshabilitar versión anterior** en `internal-shared-secret`:
    ```bash
    gcloud secrets versions disable <version-anterior> --secret=internal-shared-secret
-   ```
-6. **Redeploy del Auth Service** para que cargue la nueva versión.
-7. **Borrar archivo temporal:**
-   ```bash
-   rm /tmp/new-secret.txt
    ```
 
 > **Durante la ventana de transición:** los backends que aún tienen el secret viejo van a recibir 401 al consultar `/api/internal/*`, lo que los hace fail-closed y rechazar JWTs. Idealmente, esta ventana es muy corta (< 1 minuto).

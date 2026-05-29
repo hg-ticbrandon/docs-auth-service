@@ -171,6 +171,22 @@ AUTH_INTERNAL_SECRET=<secreto-compartido>
 
 En **producción** los secretos vienen de **Secret Manager** (GCP), no de un `.env` plano.
 
+### Cómo obtener `AUTH_INTERNAL_SECRET`
+
+Es el shared secret del Auth Service (`INTERNAL_SHARED_SECRET`). Dos vías:
+
+- **Pedirlo al equipo de plataforma** (`cloud.infra@transporteshagemsa.com`) — lo
+  habitual si solo integrás un backend.
+- **Leerlo vos** si tenés rol `roles/secretmanager.secretAccessor` sobre el secreto:
+  ```bash
+  gcloud secrets versions access latest \
+    --secret=internal-shared-secret --project=hagemsa-cloud
+  ```
+
+Copialo **tal cual**, sin agregar espacios ni saltos de línea: el Auth Service lo
+compara byte-exacto. Detalle de generación/rotación en
+[Secretos](/operaciones/secretos/#4-internal-shared-secret).
+
 ## 3. Verificar conectividad
 
 Antes de cablear el módulo, validá manualmente que tu backend alcanza al Auth Service:
