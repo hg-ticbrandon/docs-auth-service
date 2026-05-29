@@ -45,21 +45,27 @@ Estos NO se traducen porque son convenciones universales de la industria:
 
 ## Códigos de permiso (convención)
 
-Formato: `<modulo>:<recurso>:<accion>`.
+Formato: `modulo:accion` o `modulo:recurso:accion` (2 o 3 segmentos, minúsculas).
+
+Los **permisos del propio Auth Service** (los únicos `auth:*` que existen en el catálogo):
 
 | Permiso | Significado |
 |---|---|
-| `auth:cuenta:crear` | Crear cuentas nuevas |
-| `auth:cuenta:suspender` | Suspender cuentas existentes |
-| `auth:cuenta:reactivar` | Reactivar cuentas suspendidas |
-| `auth:rol:asignar` | Asignar roles a cuentas |
-| `auth:sesion:revocar` | Revocar sesiones de cualquier cuenta |
+| `auth:account:read` | Ver cuentas y sus sesiones |
+| `auth:account:write` | Crear, actualizar, suspender, reactivar y desactivar cuentas; set/reset password; revocar sesiones |
+| `auth:role:assign` | Asignar y revocar roles a cuentas |
+| `auth:role:manage` | Gestionar roles y permisos (crear, editar, borrar, agregar/quitar permisos) |
+
+Ejemplos de permisos de **otros módulos** del ecosistema (también en el catálogo):
+
+| Permiso | Significado |
+|---|---|
 | `wms:inventario:read` | Leer inventario en WMS |
 | `wms:inventario:write` | Modificar inventario en WMS |
-| `despachos:guia:firmar` | Firmar guías de despacho |
-| `facturacion:factura:emitir` | Emitir facturas |
+| `wms:despacho:write` | Registrar despacho |
+| `facturacion:emitir` | Emitir facturas |
 
-El catálogo completo se siembra al deploy inicial (ver `prisma/seed.ts`).
+El catálogo completo (40 permisos) se siembra al deploy inicial (ver `prisma/seed.ts`).
 
 ## Tipos de evento de auditoría
 
@@ -68,8 +74,7 @@ Valores válidos en `audit.auth_events.event_type`:
 - `login_exitoso`
 - `login_fallido`
 - `logout`
-- `refresh_exitoso`
-- `refresh_reuso_detectado`
+- `credencial_bloqueada`
 - `password_cambiado`
 - `password_reset_solicitado`
 - `password_reset_completado`
@@ -78,5 +83,6 @@ Valores válidos en `audit.auth_events.event_type`:
 - `cuenta_reactivada`
 - `cuenta_desactivada`
 - `rol_asignado`
-- `rol_revocado`
-- `sesion_revocada`
+- `asignacion_revocada`
+- `sesion_revocada_admin`
+- `token_reusado`

@@ -22,10 +22,10 @@ Ejemplos válidos:
 ```
 wms:inventario:read
 wms:inventario:write
-despachos:guia:firmar
-facturacion:factura:emitir
-auth:cuenta:suspender
-auth:rol:asignar
+wms:despacho:write
+facturacion:emitir
+auth:account:write
+auth:role:assign
 ```
 
 ## Catálogo de permisos
@@ -36,14 +36,14 @@ Cada permiso vive en la tabla `authorization.permissions` del Auth Service. Solo
 
 ## Cómo asignar permisos a un rol
 
-Quien tenga el permiso `auth:rol:asignar` puede modificar permisos vía:
+Quien tenga el permiso `auth:role:manage` puede modificar permisos vía:
 
 ```http
 POST /api/admin/roles/:id/permisos
 Authorization: Bearer <jwt-admin>
 Content-Type: application/json
 
-{ "codigo": "wms:inventario:read" }
+{ "codigoPermiso": "wms:inventario:read" }
 ```
 
 ## Cómo asignar un rol con scope a una cuenta
@@ -70,7 +70,7 @@ Cuando un endpoint requiere `wms:inventario:write` con scope `almacenId`:
 3. De esos, busca uno con scope compatible (vacío = global, o con el `almacenId` del path).
 4. Si encuentra → pasa. Si no → 403.
 
-> El JWT trae los permisos del rol embebidos al momento de su emisión. Esto evita el round-trip a `/api/internal/roles/:nombre/permisos` en cada request. **Trade-off:** cambios al catálogo de permisos no se reflejan hasta que el access token expira y se refresca. El endpoint `/api/internal/roles/:nombre/permisos` sigue existiendo como fallback para casos puntuales o auditoría.
+> El JWT trae los permisos del rol embebidos al momento de su emisión, así que la lib autoriza **sin ningún round-trip** al Auth Service. **Trade-off:** cambios al catálogo de permisos no se reflejan hasta que el access token expira y se refresca (~TTL del access). Si necesitás ver los permisos actuales de un rol (admin/auditoría), consultá `GET /api/admin/roles/:id`, que los devuelve en `datos.permisos`.
 
 ## Patrones comunes
 

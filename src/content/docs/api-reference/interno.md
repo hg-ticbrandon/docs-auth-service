@@ -17,34 +17,12 @@ El secret se compara con la env `INTERNAL_SHARED_SECRET` del Auth Service en mod
 
 Sin secret o con secret incorrecto → `401 Unauthorized`.
 
-## GET /api/internal/roles/:nombre/permisos
-
-Devuelve los permisos asociados a un rol por nombre.
-
-**Request:**
-
-```http
-GET /api/internal/roles/ALMACENERO/permisos
-X-Internal-Secret: <secret>
-```
-
-**Response 200:**
-
-```json
-{
-  "rol": "ALMACENERO",
-  "permisos": ["wms:inventario:read", "wms:inventario:write"]
-}
-```
-
-**Errores:**
-
-| Código | Causa |
-|---|---|
-| `401` | Sin secret o secret inválido |
-| `404` | Rol no encontrado |
-
-**Uso:** la lib lo consulta cuando un endpoint exige `@RequirePermission`. Resultado cacheado **5 minutos** en cada instancia de backend.
+> **Nota:** existe **un solo** endpoint interno: el de blacklist de `jti` (abajo).
+> No hay un endpoint para resolver permisos de un rol — los permisos viajan
+> **embebidos en el JWT** (`roles[].permisos`), así que la lib autoriza
+> `@RequirePermission` / `@RequireScope` sin llamar al Auth Service. (Versiones
+> viejas exponían `GET /api/internal/roles/:nombre/permisos`; ese endpoint fue
+> eliminado.)
 
 ## GET /api/internal/jti/:jti/revoked
 
@@ -75,6 +53,6 @@ o
 
 ## ¿Por qué shared secret y no mTLS?
 
-mTLS es la opción ideal, pero requiere infraestructura adicional (PKI interna, certificados rotables, configuración por backend). En Cloud Run + VPC Connector, un shared secret + red privada da suficiente protección para v1.
+mTLS es la opción ideal, pero requiere infraestructura adicional (PKI interna, certificados rotables, configuración por backend). Para v1, un shared secret comparado de forma timing-safe da suficiente protección: el endpoint es de solo lectura (consulta de estado de un `jti`) y no expone datos sensibles.
 
-Roadmap: cuando los backends pasen a VPC interna, evaluar Workload Identity + IAM en lugar del secret.
+Roadmap: cuando los backends corran en una red privada (VPC interna), evaluar Workload Identity + IAM en lugar del secret.

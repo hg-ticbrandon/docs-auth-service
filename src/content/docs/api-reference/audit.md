@@ -61,11 +61,12 @@ Los más consultados en investigaciones:
 | `login_exitoso` | Login con credenciales correctas |
 | `login_fallido` | Credenciales inválidas (incluye password mala + cuenta inexistente) |
 | `logout` | El usuario hace logout explícito |
-| `refresh_reuso_detectado` | Se detectó reuso de refresh token → familia revocada |
+| `token_reusado` | Se detectó reuso de refresh token → familia revocada |
+| `credencial_bloqueada` | Cuenta bloqueada por intentos fallidos |
 | `cuenta_suspendida` | Un admin suspendió una cuenta |
 | `password_cambiado` | Password reseteado o cambiado |
 | `rol_asignado` | Se asignó un rol a una cuenta |
-| `sesion_revocada` | Admin revocó una sesión específica |
+| `sesion_revocada_admin` | Admin revocó una sesión específica |
 
 ## Regla inquebrantable: append-only
 

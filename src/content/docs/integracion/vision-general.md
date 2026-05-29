@@ -7,9 +7,11 @@ Esta sección es para devs que están construyendo o manteniendo un backend dent
 
 ## Pre-requisitos
 
-- Backend con **NestJS 10+** y **TypeScript 5+**.
-- Acceso al Artifact Registry interno de HAGEMSA (para instalar `@hagemsa/auth-guard`).
-- Variables de entorno para apuntar al Auth Service (`AUTH_JWKS_URL`, `AUTH_BASE_URL`, `AUTH_INTERNAL_SECRET`).
+- Backend con **NestJS 11+** y **TypeScript 5+** (la lib declara `@nestjs/common@^11` como peer dependency).
+- Acceso de lectura al Artifact Registry interno de HAGEMSA (para instalar `@hagemsa/auth-guard`). [Ver instalación →](/integracion/instalacion/)
+- Variables de entorno para apuntar al Auth Service:
+  - **Mínimo (validar JWT + permisos + scopes):** `AUTH_JWKS_URL`, `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`.
+  - **Solo si activás blacklist (logout instantáneo):** sumá `AUTH_SERVICE_URL` y `AUTH_INTERNAL_SECRET`.
 
 ## Lo que vas a hacer
 
@@ -26,29 +28,32 @@ Cuando un cliente hace una request a tu backend:
 ```
 1. Cliente → Tu backend:    GET /tu-endpoint  Bearer <JWT>
 2. Tu backend → JWKS cache: ¿clave para kid=X?  (cacheado 24h)
-3. Tu backend valida firma localmente
-4. Tu backend → Auth Service: ¿jti revocado?  (cacheado 30s, fail-closed)
-5. Tu backend → Auth Service: permisos del rol R? (cacheado 5min)
-6. Tu backend verifica permisos + scope
-7. Tu backend procesa la request si todo OK, devuelve 401/403 si no
+3. Tu backend valida firma + iss + aud + exp localmente
+4. Tu backend → Auth Service: ¿jti revocado?  (SOLO si enableBlacklistCheck; cacheado 30s, fail-closed)
+5. Tu backend verifica permisos + scope leyendo los claims del JWT
+   (roles[].permisos / roles[].scope) — SIN fetch al Auth Service
+6. Tu backend procesa la request si todo OK, devuelve 401/403 si no
 ```
 
 La lib `@hagemsa/auth-guard` hace 1-6 por vos. Solo tenés que decirle qué permiso y scope requiere cada endpoint.
+
+> **Importante:** los permisos y scopes vienen **embebidos en el JWT** (`roles[].permisos`, `roles[].scope`), así que la lib NO hace round-trip al Auth Service para autorizar. El único fetch en runtime es el chequeo de blacklist del paso 4, y **solo** si activás `enableBlacklistCheck`. Sin esa opción, validar un request es 100% local (una operación criptográfica). Trade-off: un cambio de permisos en un rol recién se refleja cuando el access token expira y se refresca (~TTL del access, hoy 1 hora).
 
 ## Caché y latencia
 
 | Cache | TTL default | Configurable |
 |---|---|---|
 | JWKS (claves públicas) | 24 horas | sí (`jwksCacheTtlSeconds`) |
-| Permisos por rol | 5 minutos | sí (`permissionCacheTtlSeconds`) |
-| Revocación por JTI | 30 segundos | sí (`blacklistCacheTtlSeconds`) |
+| Revocación por JTI | 30 segundos | sí (`blacklistCacheTtlSeconds`) — solo si `enableBlacklistCheck` |
 
-En condiciones normales (cache caliente), validar un JWT cuesta **una operación criptográfica local** + un fetch al Auth Service por jti cada 30s. Latencia esperada: < 5ms.
+> Los **permisos NO se cachean** porque NO se consultan: vienen embebidos en el JWT. La opción `permissionCacheTtlSeconds` quedó como legacy del modelo anterior y hoy no tiene efecto.
+
+En condiciones normales (cache caliente), validar un JWT cuesta **una operación criptográfica local**. Si activás blacklist, se suma un fetch al Auth Service por jti cada 30s. Latencia esperada: < 5ms.
 
 ## Modelo de fallo
 
 - **Auth Service caído + cache fría:** todos los requests devuelven 401. El sistema falla cerrado (preferimos rechazar accesos válidos que dejar pasar sesiones comprometidas).
-- **Auth Service caído + cache caliente:** el cache de JWKS y permisos sigue sirviendo hasta su TTL. La blacklist no responde → fail-closed → 401 para JWTs no cacheados como válidos.
+- **Auth Service caído + cache caliente:** el cache de JWKS sigue sirviendo hasta su TTL y los permisos/scopes se leen del JWT (no dependen del Auth Service). Si `enableBlacklistCheck` está activo y la blacklist no responde → fail-closed → 401 para JWTs no cacheados como válidos. Sin blacklist, la validación sigue funcionando 100% local.
 - **JWKS rota claves:** el cache detecta cache miss para el nuevo kid y refresca automáticamente.
 
 ## Vínculos útiles

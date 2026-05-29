@@ -8,6 +8,7 @@ export default defineConfig({
       title: 'HAGEMSA Auth Service',
       description:
         'Documentación del servicio de autenticación y autorización centralizado de Transportes HAGEMSA SAC.',
+      customCss: ['./src/styles/custom.css'],
       defaultLocale: 'root',
       locales: {
         root: { label: 'Español', lang: 'es' },
@@ -72,6 +73,7 @@ export default defineConfig({
           items: [
             { label: 'Setup de GCP', slug: 'operaciones/setup-gcp' },
             { label: 'Secretos y claves', slug: 'operaciones/secretos' },
+            { label: 'Publicar auth-guard', slug: 'operaciones/publicar-libreria' },
             { label: 'Migrations', slug: 'operaciones/migrations' },
             { label: 'Deploy a Cloud Run', slug: 'operaciones/deploy-cloud-run' },
             { label: 'Monitoring', slug: 'operaciones/monitoring' },

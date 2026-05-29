@@ -10,36 +10,70 @@ Las migrations se aplican **desde tu máquina** (no desde Cloud Run), conectánd
 **Windows:**
 
 ```powershell
-# Descargar el binario más reciente
+# Descargar el binario (ajustar la versión a la última disponible)
+mkdir -p $env:USERPROFILE\bin
 Invoke-WebRequest `
-  -Uri https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.x.x/cloud-sql-proxy.x64.exe `
-  -OutFile cloud-sql-proxy.exe
+  -Uri https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.2/cloud-sql-proxy.x64.exe `
+  -OutFile $env:USERPROFILE\bin\cloud-sql-proxy.exe
 ```
 
 **macOS/Linux:** ver [docs oficiales](https://cloud.google.com/sql/docs/postgres/sql-proxy).
 
 ## 2. Levantar el proxy
 
+El proxy soporta dos formas de autenticarse:
+
+**Opción A — Application Default Credentials (recomendado):**
+
 ```bash
-./cloud-sql-proxy hagemsa-cloud:us-central1:hagemsa-postgresql
+gcloud auth application-default login   # one-time
+./cloud-sql-proxy --port 5433 hagemsa-cloud:us-central1:hagemsa-postgresql
 ```
 
-El proxy abre Postgres en `127.0.0.1:5432`. Autentica con tus credenciales de `gcloud auth login` (no necesitás IP pública abierta).
+**Opción B — Access token corto (si ADC falla por política del Workspace):**
+
+Si el `application-default login` falla porque tu Workspace bloquea la pantalla de consent (error "Missing required parameter: redirect_uri" o "scope not consented"), usá un access token corto del `gcloud auth login` que ya tenés activo:
+
+```bash
+./cloud-sql-proxy --port 5433 \
+  --token "$(gcloud auth print-access-token)" \
+  hagemsa-cloud:us-central1:hagemsa-postgresql
+```
+
+:::caution[Token expira en ~1h]
+Si la sesión dura más, el proxy empezará a tirar `Server has closed the connection`. Reiniciarlo con un token fresco.
+:::
+
+El proxy abre Postgres en `127.0.0.1:5433` (cambialo si tenés otro Postgres en `5432`).
 
 ## 3. DATABASE_URL para migrations
 
 En **otra terminal**, en el proyecto del Auth Service, exportá la URL apuntando al proxy con el usuario `auth_migrator`:
 
 ```bash
-export DATABASE_URL="postgresql://auth_migrator:<password-url-encoded>@127.0.0.1:5432/db_auth_service"
+export DATABASE_URL="postgresql://auth_migrator:<password-url-encoded>@127.0.0.1:5433/db_auth_service?schema=public"
 ```
 
-> Si **no recordás la password** de `auth_migrator`, regenerala:
+:::tip[URL-encoding del password]
+Los caracteres `+`, `=`, `{`, `}` y similares deben ir URL-encoded en la connection string. Quick way en Python:
+```bash
+python -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "<password-en-claro>"
+```
+
+Para evitar futuros dolores de cabeza, generar passwords solo con caracteres alfanuméricos + un sufijo fijo (ej. `Pw1-`) que satisfaga la política de Cloud SQL sin tener chars problemáticos:
+```bash
+RAW=$(openssl rand -base64 24 | tr '+/=' 'Aa1')
+NEW_PW="Pw1-${RAW}"
+```
+:::
+
+> Si **no recordás la password** de `auth_migrator` o `auth_service`, regenerá la del que necesitás:
 > ```bash
-> gcloud sql users set-password auth_migrator \
+> gcloud sql users set-password auth_service \
 >   --instance=hagemsa-postgresql \
->   --password="$(openssl rand -base64 18 | tr -d '=+/')Aa1"
+>   --password="<NUEVA-PASSWORD>"
 > ```
+> Y **actualizá el secret** `auth-db-url` con la URL nueva (ver [Secretos](/operaciones/secretos/)).
 
 ## 4. Aplicar migrations
 

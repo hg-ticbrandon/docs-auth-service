@@ -33,6 +33,8 @@ PostgreSQL 16 con **multi-schema**: 5 schemas, 11 tablas.
 
 ## Tablas principales
 
+> **Nota sobre los `CHECK`:** el SQL de abajo muestra el modelo lógico. Los valores enum (`account_type`, `status`, `event_type`) **se validan en la capa de aplicación** mediante value objects (`TipoCuenta`, `EstadoCuenta`, `TipoEventoAuth`), no con constraints `CHECK` en la base — el schema Prisma actual no los genera. Los `CHECK ... IN (...)` reflejan los valores permitidos, no un constraint físico existente.
+
 ### identity.accounts
 
 ```sql
@@ -126,7 +128,7 @@ revocation_reason  TEXT
 ```sql
 id                 UUID PRIMARY KEY,
 account_id         UUID,                              -- null en algunos eventos del sistema
-event_type         VARCHAR(50) NOT NULL,              -- ver tipos válidos en CHECK
+event_type         VARCHAR(50) NOT NULL,              -- valores validados en app (TipoEventoAuth)
 metadata           JSONB DEFAULT '{}',
 ip_address         INET,
 user_agent         TEXT,

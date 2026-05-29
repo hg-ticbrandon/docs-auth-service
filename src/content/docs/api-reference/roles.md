@@ -184,8 +184,8 @@ Todos los roles del seed son `esSistema: true`. Su nombre y descripción son inm
 
 | Rol | Permisos principales |
 |---|---|
-| `SUPER_ADMIN` | (sin permisos asignados — el guard del frontend usa el rol; backends usan los permisos según corresponda) |
-| `GERENTE` | (sin permisos preasignados, escritura limitada según contexto) |
+| `SUPER_ADMIN` | **Todos** los permisos del catálogo (el seed le asigna cada permiso existente) |
+| `GERENTE` | **Todos** los permisos terminados en `:read` (lectura general de toda la org) |
 | `JEFE_ALMACEN` | `wms:*`, `flota:vehiculo:read`, `mantenimiento:reportes:read` |
 | `ALMACENERO` | `wms:inventario:read/write`, `wms:recepcion:write`, `wms:despacho:write` |
 | `OPERADOR_FLOTA` | `flota:vehiculo:read/write`, `flota:asignacion:write`, `flota:gps:read`, `mantenimiento:reportes:read` |

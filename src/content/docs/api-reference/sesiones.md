@@ -61,7 +61,7 @@ Revoca una sesión específica. Requiere `auth:account:write`.
 1. La sesión queda con `revocadaEn` + razón.
 2. El `jti` se agrega a `sessions.revoked_jtis` hasta su `expiraEn`.
 3. El refresh token asociado se revoca (y toda su familia).
-4. Se emite evento de auditoría `sesion_revocada`.
+4. Se emite evento de auditoría `sesion_revocada_admin`.
 5. Los backends del ecosistema reciben el efecto en **≤30 segundos** (TTL del BlacklistChecker cache).
 
 ## Revocar todas las sesiones de una cuenta

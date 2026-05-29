@@ -55,6 +55,32 @@ rm /tmp/dburl.txt
 
 > **Por qué archivo temporal:** Cloud Shell mete saltos de línea en pipes con strings largos. Usar archivo evita el problema.
 
+### Rotar el password de `auth_service`
+
+Si el password de `auth_service` quedó desincronizado con Cloud SQL (típicamente porque cambió en uno pero no en el otro), rotalo y actualizá una nueva versión del secret:
+
+```bash
+# 1. Generar password URL-safe que cumpla la política (mayúscula + minúscula + número + special)
+RAW=$(openssl rand -base64 24 | tr '+/=' 'Aa1')
+NEW_PW="Pw1-${RAW}"
+
+# 2. Aplicar a Cloud SQL
+gcloud sql users set-password auth_service --instance=hagemsa-postgresql --password="$NEW_PW"
+
+# 3. Componer la URL nueva y subirla como nueva versión del secret
+PW_ENCODED=$(python -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$NEW_PW")
+echo -n "postgresql://auth_service:${PW_ENCODED}@/db_auth_service?host=/cloudsql/hagemsa-cloud:us-central1:hagemsa-postgresql" \
+  > /tmp/dburl.txt
+gcloud secrets versions add auth-db-url --data-file=/tmp/dburl.txt
+rm /tmp/dburl.txt
+```
+
+Cloud Run lee `auth-db-url:latest` y toma la versión nueva en el próximo deploy o restart automático. **No** hay que cambiar la config del servicio.
+
+:::caution[Passwords con `+`, `=`, `/`]
+Cloud SQL acepta passwords con estos caracteres, pero te van a complicar todo el resto del flujo (URL-encoding, shell escaping, lectura del secret en scripts). Recomendado: generar passwords solo con alfanuméricos + un sufijo fijo seguro (`Pw1-` ya tiene los 4 tipos exigidos por la política).
+:::
+
 ## 4. Internal shared secret
 
 ```bash

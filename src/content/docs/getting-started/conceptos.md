@@ -35,7 +35,7 @@ Token firmado que prueba quién es el usuario. Se compone de 3 partes (header, p
 }
 ```
 
-> Cada item de `roles[]` embebe los **permisos efectivos del rol al emitir el JWT**. Los backends consumidores autorizan sin round-trip al Auth Service. Trade-off: cambios al catálogo de permisos no se reflejan hasta que el access token expira y se refresca — mantené el TTL del access token bajo (~15 min) para acotar esa ventana.
+> Cada item de `roles[]` embebe los **permisos efectivos del rol al emitir el JWT**. Los backends consumidores autorizan sin round-trip al Auth Service. Trade-off: cambios al catálogo de permisos no se reflejan hasta que el access token expira y se refresca — con el TTL actual (1 hora, `JWT_ACCESS_TTL_SECONDS`) esa ventana es de máximo 1 hora.
 
 ## JWKS (JSON Web Key Set)
 
@@ -47,13 +47,13 @@ Endpoint público (`/.well-known/jwks.json`) que expone las claves públicas con
 
 **Scopes:** restringen un rol a un sub-dominio. Ej. un `ALMACENERO` con `scope: { almacenId: 'lima-1' }` solo puede operar el almacén de Lima 1; el de Lima 2 le da 403.
 
-**Códigos de permiso:** convención `<modulo>:<recurso>:<accion>`. Ejemplos:
+**Códigos de permiso:** convención `modulo:accion` o `modulo:recurso:accion`. Ejemplos reales del catálogo:
 
 - `wms:inventario:read`
 - `wms:inventario:write`
-- `despachos:guia:firmar`
-- `facturacion:factura:emitir`
-- `auth:cuenta:suspender`
+- `wms:despacho:write`
+- `facturacion:emitir`
+- `auth:account:write`
 
 ## Access token vs refresh token
 

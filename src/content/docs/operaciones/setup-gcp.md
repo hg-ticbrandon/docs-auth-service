@@ -115,6 +115,70 @@ ALTER SCHEMA audit OWNER TO postgres;
 REVOKE auth_migrator FROM postgres;
 ```
 
+## 4. Artifact Registry
+
+```bash
+gcloud artifacts repositories create auth \
+  --repository-format=docker \
+  --location=us-central1 \
+  --description="Imágenes del Auth Service"
+```
+
+## 5. Service Account de runtime
+
+El servicio corre en Cloud Run con un SA dedicado que solo tiene los roles que necesita.
+
+```bash
+gcloud iam service-accounts create auth-service \
+  --display-name="Auth Service runtime"
+
+PROJECT_ID=hagemsa-cloud
+RUNTIME_SA=auth-service@${PROJECT_ID}.iam.gserviceaccount.com
+
+# Leer secretos, conectar a Cloud SQL, escribir logs
+gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$RUNTIME_SA" --role="roles/secretmanager.secretAccessor" --condition=None
+gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$RUNTIME_SA" --role="roles/cloudsql.client" --condition=None
+gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:$RUNTIME_SA" --role="roles/logging.logWriter" --condition=None
+```
+
+## 6. IAM para el SA que ejecuta builds
+
+Cloud Build regional (con `--region=us-central1`) corre por default con el **Compute Engine default SA** (`<PROJECT_NUMBER>-compute@developer.gserviceaccount.com`), no con el legacy Cloud Build SA. Hay que darle 3 roles para que pueda hacer el build + deploy:
+
+```bash
+PROJECT_NUM=$(gcloud projects describe hagemsa-cloud --format="value(projectNumber)")
+COMPUTE_SA="${PROJECT_NUM}-compute@developer.gserviceaccount.com"
+RUNTIME_SA="auth-service@hagemsa-cloud.iam.gserviceaccount.com"
+
+# Leer secrets durante el build
+gcloud projects add-iam-policy-binding hagemsa-cloud --member="serviceAccount:$COMPUTE_SA" --role="roles/secretmanager.secretAccessor" --condition=None
+
+# Deployar Cloud Run
+gcloud projects add-iam-policy-binding hagemsa-cloud --member="serviceAccount:$COMPUTE_SA" --role="roles/run.admin" --condition=None
+
+# Impersonar al runtime SA (necesario para asignarlo al service)
+gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA" \
+  --member="serviceAccount:$COMPUTE_SA" \
+  --role="roles/iam.serviceAccountUser"
+```
+
+:::caution[Conditional IAM bindings preexistentes]
+Si el proyecto tiene bindings con `condition` (por ejemplo, Developer Connect), `gcloud` falla al agregar nuevos roles **sin** el flag `--condition=None`. Pasarlo siempre como en los ejemplos de arriba.
+:::
+
+## 7. APIs adicionales según features
+
+El bloque del paso 2 cubre lo mínimo. Si vas a habilitar features extra, agregar:
+
+```bash
+# Si usás Memorystore Redis para cache de permisos:
+gcloud services enable redis.googleapis.com
+
+# Si configurás Cloud Build trigger sobre GitHub:
+gcloud services enable cloudbuild.googleapis.com  # (ya está en el paso 2)
+gcloud services enable iam.googleapis.com         # (ya está)
+```
+
 ## Próximo paso
 
 [Configurar secretos →](/operaciones/secretos/)

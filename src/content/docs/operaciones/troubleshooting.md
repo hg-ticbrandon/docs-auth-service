@@ -15,8 +15,11 @@ description: Problemas comunes en producción y cómo diagnosticarlos.
    ```
 2. Buscar errores comunes:
    - `Can't reach database server`: verificar `--add-cloudsql-instances` y la SA tiene `roles/cloudsql.client`.
+   - `Authentication failed against the database server`: el password de `auth_service` en Cloud SQL no coincide con el del secret `auth-db-url`. Rotalo según [Secretos §3](/operaciones/secretos/#rotar-el-password-de-auth_service).
    - `No se encontraron claves RSA para JWT`: verificar que `JWT_PRIVATE_KEY` y `JWT_PUBLIC_KEY` están como secretos montados.
-   - `Cannot find module 'X'`: bug en el Dockerfile, no incluyó un archivo.
+   - `Cannot find module 'dotenv/config'`: `dotenv` quedó en `devDependencies`. Moverlo a `dependencies`.
+   - `Cannot find module '/app/dist/main.js'`: el `CMD` del Dockerfile apunta a `dist/main.js` pero `nest build` produce `dist/src/main.js`. Corregir el CMD.
+   - `Cannot find module 'X'`: otra dep que está en `devDependencies` y se usa en runtime — moverla a `dependencies`.
 
 ## Health check `/health/ready` da 503
 
@@ -115,6 +118,63 @@ gcloud run services update-traffic auth-service \
   --to-revisions=<revision-id>=100 \
   --region=us-central1
 ```
+
+## Build de Cloud Build falla
+
+### `permission denied on resource (secretmanager.versions.access)`
+
+El SA que ejecuta el build no tiene permiso para leer secretos. Por default los **builds regionales** (`--region=us-central1`) usan el **Compute Engine default SA**, no el legacy Cloud Build SA:
+
+```bash
+PROJECT_NUM=$(gcloud projects describe hagemsa-cloud --format="value(projectNumber)")
+COMPUTE_SA="${PROJECT_NUM}-compute@developer.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding hagemsa-cloud \
+  --member="serviceAccount:$COMPUTE_SA" \
+  --role="roles/secretmanager.secretAccessor" \
+  --condition=None
+```
+
+Ver el setup completo de IAM en [Setup de GCP §6](/operaciones/setup-gcp/#6-iam-para-el-sa-que-ejecuta-builds).
+
+### `prisma/schema.prisma file not found` durante `pnpm install`
+
+El `postinstall` script corre `prisma generate` que necesita el schema, pero el Dockerfile aún no lo copió. Mover el `COPY prisma ./prisma` **antes** del `RUN pnpm install`.
+
+### `EACCES: permission denied, mkdir '/builder/home/.cache/node/corepack'`
+
+El step usa el container con `USER node` y corepack quiere cachear en un directorio que no es escribible. Las migrations **NO** se corren en Cloud Build — se corren manualmente con el proxy (ver [Migrations](/operaciones/migrations/)).
+
+### `provide a user-managed service account` al setear `serviceAccount:` en cloudbuild.yaml
+
+El legacy `<PROJECT_NUM>@cloudbuild.gserviceaccount.com` es Google-managed, no se puede usar en la opción `serviceAccount:` del cloudbuild.yaml. Opciones:
+
+- Dejar la opción sin setear (usa el Compute SA, requiere los roles del paso §6 del setup).
+- Crear un SA user-managed dedicado a builds y darle los mismos roles.
+
+## Cloud SQL Auth Proxy no arranca
+
+### `could not find default credentials`
+
+Application Default Credentials no están configurados. Opciones:
+
+```bash
+# Opción A — flujo browser (puede fallar por política de Workspace)
+gcloud auth application-default login
+
+# Opción B — access token corto (válido ~1h)
+./cloud-sql-proxy --port 5433 \
+  --token "$(gcloud auth print-access-token)" \
+  hagemsa-cloud:us-central1:hagemsa-postgresql
+```
+
+### Browser flow: `Missing required parameter: redirect_uri` o `scope not consented`
+
+Tu Google Workspace bloquea el consent. Usar la opción B con `--token` (ver arriba).
+
+### `Server has closed the connection` después de un rato
+
+El token corto del proxy expira en 1h. Matar el proxy y reiniciarlo con un token fresco.
 
 ## Recursos útiles
 

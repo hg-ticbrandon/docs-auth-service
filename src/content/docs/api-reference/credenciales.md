@@ -31,7 +31,7 @@ Content-Type: application/json
 
 | HTTP | `codigo` | Cuándo |
 |---|---|---|
-| 422 | `AUTH_PASSWORD_NO_CUMPLE_POLITICA` | Password no cumple la política (mínimo, mayúscula, minúscula, número). El `detalle` describe qué falló. |
+| 422 | `AUTH_PASSWORD_NO_CUMPLE_POLITICA` | Password no cumple la política (mínimo 8, mayúscula, número). El `detalle` describe qué falló. |
 | 422 | `COMUN_VALIDACION_FALLIDA` | DTO inválido (password vacío). |
 | 404 | `AUTH_CUENTA_NO_ENCONTRADA` | El id no corresponde a una cuenta. |
 
@@ -39,8 +39,8 @@ Content-Type: application/json
 
 - Mínimo 8 caracteres
 - Al menos 1 mayúscula
-- Al menos 1 minúscula
 - Al menos 1 número
+- (Símbolos y minúsculas: opcionales)
 
 ## POST /api/admin/cuentas/:id/reset-password
 

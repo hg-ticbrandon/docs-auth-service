@@ -30,7 +30,7 @@ Content-Type: application/json
     "refreshToken": "rt_a1b2c3d4...",
     "tokenType": "Bearer",
     "expiresIn": 3600,
-    "refreshExpiresIn": 86400
+    "refreshExpiresIn": 2592000
   }
 }
 ```
@@ -66,7 +66,7 @@ Content-Type: application/json
     "refreshToken": "rt_nuevo...",
     "tokenType": "Bearer",
     "expiresIn": 3600,
-    "refreshExpiresIn": 86400
+    "refreshExpiresIn": 2592000
   }
 }
 ```
@@ -147,5 +147,5 @@ Content-Type: application/json
 | HTTP | `codigo` | Cuándo |
 |---|---|---|
 | 400 | `AUTH_RESET_TOKEN_INVALIDO` | Token de reset inválido, expirado o ya consumido. |
-| 422 | `AUTH_PASSWORD_NO_CUMPLE_POLITICA` | Password no cumple la política (mínimo 8 chars, mezcla mayúsculas/minúsculas/números). |
+| 422 | `AUTH_PASSWORD_NO_CUMPLE_POLITICA` | Password no cumple la política (mínimo 8 chars, al menos 1 mayúscula y 1 número). |
 | 429 | `COMUN_LIMITE_PETICIONES` | Más de 5 intentos por minuto desde la misma IP. |

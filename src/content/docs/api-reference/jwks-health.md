@@ -37,7 +37,7 @@ Liveness probe — responde 200 si el proceso está vivo. **No consulta DB ni de
 **Response 200:**
 
 ```json
-{ "status": "ok" }
+{ "status": "ok", "uptime": 254.49 }
 ```
 
 ## GET /health/ready
@@ -50,8 +50,8 @@ Readiness probe — responde 200 solo si el servicio puede procesar requests (DB
 {
   "status": "ok",
   "checks": {
-    "database": "ok",
-    "rsaKeys": "ok"
+    "db": { "ok": true },
+    "rsaKeys": { "ok": true }
   }
 }
 ```
@@ -62,8 +62,8 @@ Readiness probe — responde 200 solo si el servicio puede procesar requests (DB
 {
   "status": "error",
   "checks": {
-    "database": "error: connection refused",
-    "rsaKeys": "ok"
+    "db": { "ok": false, "detail": "connection refused" },
+    "rsaKeys": { "ok": true }
   }
 }
 ```

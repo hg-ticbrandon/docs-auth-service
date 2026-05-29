@@ -106,7 +106,7 @@ Los logs del `JwtAuthGuard` te dirán si el problema es:
 - Estás usando `localhost` en producción.
 - El Auth Service está abajo.
 
-Probá manualmente: `curl <AUTH_BASE_URL>/health` desde el contenedor de tu backend.
+Probá manualmente: `curl <AUTH_SERVICE_URL>/health` desde el contenedor de tu backend.
 
 ## internalSecret está definido pero recibo 401 igual
 

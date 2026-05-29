@@ -1,0 +1,39 @@
+/*
+ * Tema oscuro personalizado — HAGEMSA Auth Service
+ * ------------------------------------------------------------------
+ * Solo se personalizan los colores del TEMA OSCURO.
+ *
+ * IMPORTANTE: Starlight define sus colores dentro de `@layer starlight.base`.
+ * Este archivo se inyecta SIN capa, y en CSS las reglas sin capa siempre
+ * ganan a las que están en una capa (sin importar la especificidad). Por eso
+ * NO se puede usar `:root` a secas: sobrescribiría también el tema claro.
+ *
+ * Solución: las reglas se limitan a `:root:not([data-theme='light'])`, que
+ * coincide con el estado oscuro por defecto y con data-theme='dark', pero
+ * NUNCA con el tema claro. Así el tema claro conserva su paleta original.
+ *
+ * Paleta oscura: casi negro / monocromática, con un acento neutro
+ * (gris azulado) en lugar del azul brillante por defecto.
+ */
+
+:root:not([data-theme='light']),
+:root:not([data-theme='light']) ::backdrop {
+	/* Escala de grises del tema oscuro (de claro a oscuro) */
+	--sl-color-white: hsl(0, 0%, 100%);
+	--sl-color-gray-1: hsl(220, 14%, 92%);
+	--sl-color-gray-2: hsl(220, 8%, 74%);
+	--sl-color-gray-3: hsl(220, 7%, 54%);
+	--sl-color-gray-4: hsl(220, 8%, 33%);
+	--sl-color-gray-5: hsl(220, 11%, 18%);
+	--sl-color-gray-6: hsl(220, 14%, 9%); /* nav y sidebar */
+	--sl-color-black: hsl(220, 16%, 4%); /* fondo principal, casi negro */
+
+	/* Acento del tema oscuro: gris azulado sobrio
+	   (enlaces, botón del hero, item activo del sidebar) */
+	--sl-color-accent-low: hsl(220, 28%, 13%);
+	--sl-color-accent: hsl(220, 16%, 48%);
+	--sl-color-accent-high: hsl(220, 22%, 82%);
+
+	/* Overlay del fondo en modales / menú móvil */
+	--sl-color-backdrop-overlay: hsla(220, 18%, 3%, 0.72);
+}

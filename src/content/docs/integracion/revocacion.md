@@ -55,7 +55,7 @@ Cuando un usuario hace logout en tu backend:
 
 ## Logout de "todas las sesiones"
 
-Para forzar que un usuario tenga que volver a loguear en **todos sus dispositivos**, un admin con `auth:sesion:revocar` puede:
+Para forzar que un usuario tenga que volver a loguear en **todos sus dispositivos**, un admin con `auth:account:write` puede:
 
 ```http
 GET /api/admin/cuentas/:cuentaId/sesiones        # listar
@@ -66,13 +66,13 @@ Para revocar todas, repetir el POST por cada sesión activa.
 
 ## Cuándo NO usar blacklist
 
-Si tu backend tiene SLA estricto de latencia (< 5ms p99) y el access token TTL es corto (≤ 15 min), podés saltarte la blacklist:
+Si tu backend prioriza latencia/simplicidad (validación 100% local, sin fetch al Auth Service) y aceptás que un logout tarde hasta el TTL del access token en surtir efecto, podés saltarte la blacklist:
 
 ```typescript
 enableBlacklistCheck: false
 ```
 
-Ventana de revocación = TTL del access token. El refresh con rotación bloquea futuras emisiones.
+Ventana de revocación = TTL del access token (hoy **1 hora**, `JWT_ACCESS_TTL_SECONDS`). El refresh con rotación bloquea futuras emisiones, así que tras ese plazo el atacante no puede renovar. Si necesitás revocación más inmediata, activá la blacklist o bajá el TTL del access. Es la configuración que usa el backend de prueba de referencia.
 
 ## Próximo paso
 

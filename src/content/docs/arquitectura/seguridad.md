@@ -91,7 +91,7 @@ Esta es una pregunta razonable y la respuesta resumida es: **el modelo está dis
 
 | Capa | Cómo limita el ataque |
 |---|---|
-| **TTL corto del access token** (15 min) | El JWT robado expira solo en máximo 15 min. Después es papel mojado. |
+| **TTL corto del access token** (1 hora) | El JWT robado expira solo en máximo 1 hora. Después es papel mojado. Configurable via `JWT_ACCESS_TTL_SECONDS`; bajarlo achica la ventana. |
 | **Cookies `httpOnly`** | El JWT vive en cookie httpOnly que JavaScript no puede leer. Bloquea XSS, el vector #1 de robo. |
 | **HTTPS + `Secure`** | El JWT viaja siempre por TLS. Un atacante en la red local no lo ve. |
 | **`SameSite=Lax`** | Las cookies no se envían a sitios cruzados. Mitiga CSRF. |
@@ -120,7 +120,7 @@ Esta es una pregunta razonable y la respuesta resumida es: **el modelo está dis
 | Escenario | ¿Comprometido? | Daño | Mitigación principal |
 |---|---|---|---|
 | Atacante tiene solo la pública | Sí (siempre — es pública) | Ninguno | N/A — es pública por diseño |
-| Atacante tiene un JWT de usuario | Sí | Suplantar a ese usuario por max 15 min | TTL corto + httpOnly + blacklist |
+| Atacante tiene un JWT de usuario | Sí | Suplantar a ese usuario por max 1 hora | TTL corto + httpOnly + blacklist |
 | Atacante tiene pública + JWT | Igual que solo JWT | Igual que solo JWT | Las mismas |
 | Atacante tiene la **privada** | Catastrófico | Puede emitir JWT como cualquier usuario | Secret Manager + rotación inmediata |
 
