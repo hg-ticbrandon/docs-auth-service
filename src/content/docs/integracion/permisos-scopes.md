@@ -101,6 +101,118 @@ Y en el endpoint:
 
 (scopeKey en singular; la lib intenta primero `scopeKey` como string, después `scopeKey + 's'` como array).
 
+## Ejemplo completo: del JWT al 200 / 403
+
+Supongamos este endpoint protegido por permiso **y** scope de almacén:
+
+```typescript
+@Get('almacen/:almacenId')
+@RequirePermission('wms:inventario:read')
+@RequireScope({ paramKey: 'almacenId', scopeKey: 'almacenId' })
+verInventario(@Param('almacenId') almacenId: string) { /* ... */ }
+```
+
+El guard mira **lo que viene embebido en el JWT** (no consulta nada). Veamos el
+mismo endpoint contra distintos tokens.
+
+### Caso A — scope acotado a un almacén
+
+Payload del access token (decodificado) de un almacenero del almacén `001`:
+
+```json
+{
+  "sub": "fda38e59-f9aa-4d1c-add4-16f2fbec02f9",
+  "email": "almacenero001.prueba@hagemsa.com",
+  "type": "interno",
+  "name": "Almacenero Almacén 001",
+  "roles": [
+    {
+      "role": "ALMACENERO",
+      "scope": { "almacenId": "001" },
+      "permisos": ["wms:inventario:read", "wms:inventario:write", "wms:recepcion:write", "wms:despacho:write"]
+    }
+  ],
+  "iat": 1748000000,
+  "exp": 1748003600
+}
+```
+
+| Request | Evaluación del guard | Resultado |
+|---|---|---|
+| `GET /almacen/001` | El rol concede `wms:inventario:read` ✓ y su `scope.almacenId` (`"001"`) == param (`"001"`) ✓ | **200** |
+| `GET /almacen/002` | Concede el permiso ✓ pero `"001"` != `"002"` ✗ → ningún rol más concede | **403** |
+
+### Caso B — scope global (`{}`)
+
+Payload de un gerente (rol con scope vacío):
+
+```json
+{
+  "email": "gerente.prueba@hagemsa.com",
+  "roles": [
+    {
+      "role": "GERENTE",
+      "scope": {},
+      "permisos": ["wms:inventario:read", "facturacion:read", "rrhh:planilla:read", "..."]
+    }
+  ]
+}
+```
+
+| Request | Evaluación | Resultado |
+|---|---|---|
+| `GET /almacen/001` | scope `{}` = global → pasa cualquier almacén | **200** |
+| `GET /almacen/999` | scope `{}` = global → pasa | **200** |
+
+> Scope vacío `{}` significa "sin restricción de contexto": el permiso aplica a
+> todos los almacenes.
+
+### Caso C — scope plural (varios almacenes)
+
+Convención: clave en **plural** (`almacenIds`) con un **array**. La lib, al no
+encontrar `scope.almacenId` como string, prueba `scope.almacenIds` como array y
+verifica inclusión:
+
+```json
+{
+  "roles": [
+    {
+      "role": "ALMACENERO",
+      "scope": { "almacenIds": ["001", "002"] },
+      "permisos": ["wms:inventario:read", "wms:inventario:write"]
+    }
+  ]
+}
+```
+
+| Request | Evaluación | Resultado |
+|---|---|---|
+| `GET /almacen/001` | `["001","002"]` incluye `"001"` ✓ | **200** |
+| `GET /almacen/002` | incluye `"002"` ✓ | **200** |
+| `GET /almacen/003` | no incluye `"003"` ✗ | **403** |
+
+### Caso D — múltiples asignaciones del mismo rol
+
+Una cuenta puede tener el mismo rol asignado varias veces con scopes distintos;
+**todas** llegan en `roles[]` y el guard pasa si **alguna** matchea:
+
+```json
+{
+  "roles": [
+    { "role": "ALMACENERO", "scope": { "almacenId": "001" }, "permisos": ["wms:inventario:read"] },
+    { "role": "ALMACENERO", "scope": { "almacenId": "002" }, "permisos": ["wms:inventario:read"] }
+  ]
+}
+```
+
+`GET /almacen/001` → matchea la primera asignación → **200**.
+`GET /almacen/002` → matchea la segunda → **200**.
+`GET /almacen/003` → ninguna matchea → **403**.
+
+> Estos casos son exactamente los que valida el backend de prueba de referencia
+> (`auth-test-consumer`): SUPER_ADMIN y GERENTE (scope `{}`) pasan cualquier
+> almacén; el almacenero scopeado a `001` recibe 403 en `/almacen/002`.
+
 ## Próximo paso
 
 [Revocación y logout →](/integracion/revocacion/)

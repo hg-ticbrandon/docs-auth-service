@@ -33,6 +33,7 @@ export default defineConfig({
           label: 'Integrar un backend',
           items: [
             { label: 'Visión general', slug: 'integracion/vision-general' },
+            { label: 'Flujo del token (frontend → backend)', slug: 'integracion/flujo-token' },
             { label: 'Instalación', slug: 'integracion/instalacion' },
             { label: 'Configuración', slug: 'integracion/configuracion' },
             { label: 'Proteger endpoints', slug: 'integracion/proteger-endpoints' },
