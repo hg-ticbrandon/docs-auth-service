@@ -40,6 +40,7 @@ PostgreSQL 16 con **multi-schema**: 5 schemas, 11 tablas.
 ```sql
 id                   UUID PRIMARY KEY,
 email                VARCHAR(255) UNIQUE NOT NULL,
+username             VARCHAR(30) UNIQUE NOT NULL,
 account_type         VARCHAR(20) NOT NULL CHECK (account_type IN ('interno', 'cliente', 'proveedor')),
 status               VARCHAR(20) DEFAULT 'activo' CHECK (status IN ('activo', 'suspendido', 'inactivo')),
 full_name            VARCHAR(255) NOT NULL,
@@ -49,7 +50,9 @@ updated_at           TIMESTAMPTZ NOT NULL,
 created_by           UUID
 ```
 
-**Índices:** `email`, `status`, `account_type`.
+**Índices:** `email`, `username` (único), `status`, `account_type`.
+
+> `username` es el nombre de usuario para login (alternativa al email). Único, inmutable, validado en el dominio por el value object `NombreUsuario` (3-30 chars, empieza con letra, `[a-z0-9._-]`, sin `@`).
 
 ### credentials.passwords
 

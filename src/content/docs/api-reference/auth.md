@@ -7,7 +7,7 @@ description: Endpoints públicos para login, refresh, logout y recuperación de 
 
 ## POST /api/auth/login
 
-Autentica con email y password. Devuelve access + refresh token.
+Autentica con **email o nombre de usuario** + password. Devuelve access + refresh token.
 
 **Request:**
 
@@ -16,10 +16,12 @@ POST /api/auth/login
 Content-Type: application/json
 
 {
-  "email": "juan@hagemsa.com",
+  "identificador": "juan@hagemsa.com",
   "password": "Segura123"
 }
 ```
+
+> `identificador` acepta el **email** o el **nombre de usuario** de la cuenta. Si contiene `@` se interpreta como email; si no, como nombre de usuario. (Por eso el nombre de usuario nunca puede contener `@`.)
 
 **Response 200:**
 
@@ -39,9 +41,10 @@ Content-Type: application/json
 
 | HTTP | `codigo` | Cuándo |
 |---|---|---|
-| 401 | `AUTH_CREDENCIALES_INVALIDAS` | Email o password incorrectos. Cuenta inactiva/suspendida. Cuenta inexistente. (Mensaje genérico — no enumeramos.) |
+| 401 | `AUTH_CREDENCIALES_INVALIDAS` | Identificador o password incorrectos, o cuenta inexistente. (Mensaje genérico — no enumeramos.) |
+| 409 | `AUTH_CUENTA_SUSPENDIDA` / `AUTH_CUENTA_INACTIVA` | Credenciales correctas pero la cuenta no está habilitada (se revela solo tras validar la password). |
 | 423 | `AUTH_CUENTA_BLOQUEADA` | Bloqueo por múltiples intentos fallidos. |
-| 422 | `COMUN_VALIDACION_FALLIDA` | DTO inválido (email mal formado, password vacío). |
+| 422 | `COMUN_VALIDACION_FALLIDA` | DTO inválido (identificador o password vacío). |
 | 429 | `COMUN_LIMITE_PETICIONES` | Más de 5 intentos por minuto desde la misma IP. |
 
 ## POST /api/auth/refresh

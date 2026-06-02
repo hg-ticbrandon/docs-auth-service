@@ -20,10 +20,13 @@ Content-Type: application/json
 
 {
   "email": "nueva@hagemsa.com",
+  "nombreUsuario": "nueva.cuenta",
   "nombreCompleto": "Nueva Cuenta",
   "tipoCuenta": "interno"
 }
 ```
+
+> `nombreUsuario` es **obligatorio y único**: 3-30 caracteres, empieza con letra, solo letras, dígitos, punto, guion o guion bajo (sin `@`). Se normaliza a minúsculas y es **inmutable**. Sirve como identificador alternativo al email en el login.
 
 **Response 201:**
 
@@ -39,8 +42,9 @@ Content-Type: application/json
 
 | HTTP | `codigo` | Cuándo |
 |---|---|---|
-| 422 | `COMUN_VALIDACION_FALLIDA` | DTO inválido (con array `errores` por campo). |
+| 422 | `COMUN_VALIDACION_FALLIDA` | DTO inválido (con array `errores` por campo; incluye formato de `nombreUsuario`). |
 | 409 | `AUTH_EMAIL_YA_REGISTRADO` | Ya existe una cuenta con ese email. |
+| 409 | `AUTH_NOMBRE_USUARIO_YA_REGISTRADO` | Ya existe una cuenta con ese nombre de usuario. |
 | 403 | `COMUN_PROHIBIDO` | JWT sin permiso `auth:account:write`. |
 
 ## GET /api/admin/cuentas
@@ -62,7 +66,7 @@ Authorization: Bearer <jwt>
 | `limite` | `20` | 1–100 | Items por página. |
 | `estado` | — | `activo` / `suspendido` / `inactivo` | Filtro opcional. |
 | `tipoCuenta` | — | `interno` / `cliente` / `proveedor` | Filtro opcional. |
-| `busqueda` | — | string | Texto para buscar por email o nombre. |
+| `busqueda` | — | string | Texto para buscar por email, nombre de usuario o nombre completo. |
 
 **Response 200:**
 
@@ -72,6 +76,7 @@ Authorization: Bearer <jwt>
     {
       "id": "8c1d8a4f-3b2e-4a5d-9c7e-1b3d5f7a9c2e",
       "email": "juan@hagemsa.com",
+      "nombreUsuario": "juan.perez",
       "nombreCompleto": "Juan Pérez",
       "tipoCuenta": "interno",
       "estado": "activo",
@@ -104,6 +109,7 @@ Detalle de una cuenta. Requiere `auth:account:read`.
   "datos": {
     "id": "8c1d8a4f-3b2e-4a5d-9c7e-1b3d5f7a9c2e",
     "email": "juan@hagemsa.com",
+    "nombreUsuario": "juan.perez",
     "nombreCompleto": "Juan Pérez",
     "tipoCuenta": "interno",
     "estado": "activo",

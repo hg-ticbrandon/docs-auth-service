@@ -201,7 +201,7 @@ DELETE /api/admin/roles/.../permisos/...   → 204 No Content
 | `401` | No autenticado | Error del contrato (`COMUN_NO_AUTENTICADO` / `AUTH_CREDENCIALES_INVALIDAS` / `AUTH_TOKEN_INVALIDO`) |
 | `403` | Sin permiso | Error del contrato (`COMUN_PROHIBIDO`) |
 | `404` | No encontrado | Error del contrato del dominio |
-| `409` | Conflicto de estado | Error del contrato (`AUTH_CUENTA_SUSPENDIDA`, `AUTH_EMAIL_YA_REGISTRADO`, `AUTH_ROL_YA_EXISTE`, `AUTH_ROL_EN_USO`, `AUTH_ROL_DE_SISTEMA_PROTEGIDO`, `AUTH_PERMISO_YA_EXISTE`, `AUTH_PERMISO_EN_USO`, etc.) |
+| `409` | Conflicto de estado | Error del contrato (`AUTH_CUENTA_SUSPENDIDA`, `AUTH_EMAIL_YA_REGISTRADO`, `AUTH_NOMBRE_USUARIO_YA_REGISTRADO`, `AUTH_ROL_YA_EXISTE`, `AUTH_ROL_EN_USO`, `AUTH_ROL_DE_SISTEMA_PROTEGIDO`, `AUTH_PERMISO_YA_EXISTE`, `AUTH_PERMISO_EN_USO`, etc.) |
 | `422` | Validación fallida | Error del contrato con array `errores` |
 | `423` | Recurso bloqueado | `AUTH_CUENTA_BLOQUEADA` (tras múltiples intentos fallidos) |
 | `429` | Rate limit | `COMUN_LIMITE_PETICIONES` |

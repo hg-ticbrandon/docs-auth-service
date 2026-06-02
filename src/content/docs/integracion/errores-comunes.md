@@ -13,7 +13,9 @@ description: Problemas frecuentes integrando @hagemsa/auth-guard y cómo resolve
 | `COMUN_PROHIBIDO` | 403 | JWT válido pero sin permiso/scope requerido. |
 | `COMUN_VALIDACION_FALLIDA` | 422 | DTO con campos inválidos. El array `errores` lista qué campos. |
 | `COMUN_LIMITE_PETICIONES` | 429 | Rate limit excedido. |
-| `AUTH_CREDENCIALES_INVALIDAS` | 401 | Login con email/password incorrectos (genérico — no enumera cuentas). |
+| `AUTH_CREDENCIALES_INVALIDAS` | 401 | Login con identificador (email o usuario) / password incorrectos (genérico — no enumera cuentas). |
+| `AUTH_NOMBRE_USUARIO_YA_REGISTRADO` | 409 | Ya existe una cuenta con ese nombre de usuario. |
+| `AUTH_NOMBRE_USUARIO_INVALIDO` | 400 | Nombre de usuario con formato inválido. |
 | `AUTH_CUENTA_BLOQUEADA` | 423 | Cuenta bloqueada por intentos fallidos. |
 | `AUTH_TOKEN_INVALIDO` | 401 | Refresh token inválido, expirado o consumido. |
 | `AUTH_TOKEN_REUSADO` | 401 | Reuso detectado → toda la familia de tokens revocada. El usuario debe hacer login. |
