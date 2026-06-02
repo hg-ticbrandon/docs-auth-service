@@ -17,16 +17,19 @@ Algunos roles vienen del seed marcados como **canónicos** (`esSistema: true`). 
 
 ## POST /api/admin/roles
 
-Crea un nuevo rol custom. `esSistema` queda en `false` por defecto y la API no lo expone para evitar contaminar el catálogo canónico desde el frontend.
+Crea un nuevo rol. Toda la administración de roles se hace desde el frontend (no se tocan seeds ni la base de datos a mano), así que la API también permite crear roles de sistema.
 
 **Request:**
 
 ```json
 {
   "nombre": "ALMACENERO_LIMA",
-  "descripcion": "Almacenero con scope geográfico a Lima."
+  "descripcion": "Almacenero con scope geográfico a Lima.",
+  "esSistema": false
 }
 ```
+
+> `esSistema` es **opcional** (default `false`). Si se envía `true`, el rol nace como **canónico**: su nombre y descripción quedan inmutables y no se puede eliminar (igual que los roles del seed), pero sus permisos sí se pueden ajustar. `nombre` y `descripcion` son obligatorios.
 
 **Response 201:**
 
