@@ -199,9 +199,9 @@ DELETE /api/admin/roles/.../permisos/...   → 204 No Content
 | `204` | OK sin body | — |
 | `400` | Solicitud mal formada | Error del contrato |
 | `401` | No autenticado | Error del contrato (`COMUN_NO_AUTENTICADO` / `AUTH_CREDENCIALES_INVALIDAS` / `AUTH_TOKEN_INVALIDO`) |
-| `403` | Sin permiso | Error del contrato (`COMUN_PROHIBIDO`) |
+| `403` | Sin permiso o acción prohibida | Error del contrato (`COMUN_PROHIBIDO`, `AUTH_ROL_DE_SISTEMA_PROTEGIDO`) |
 | `404` | No encontrado | Error del contrato del dominio |
-| `409` | Conflicto de estado | Error del contrato (`AUTH_CUENTA_SUSPENDIDA`, `AUTH_EMAIL_YA_REGISTRADO`, `AUTH_NOMBRE_USUARIO_YA_REGISTRADO`, `AUTH_ROL_YA_EXISTE`, `AUTH_ROL_EN_USO`, `AUTH_ROL_DE_SISTEMA_PROTEGIDO`, `AUTH_PERMISO_YA_EXISTE`, `AUTH_PERMISO_EN_USO`, etc.) |
+| `409` | Conflicto de estado | Error del contrato (`AUTH_CUENTA_SUSPENDIDA`, `AUTH_EMAIL_YA_REGISTRADO`, `AUTH_NOMBRE_USUARIO_YA_REGISTRADO`, `AUTH_ROL_YA_EXISTE`, `AUTH_ROL_EN_USO`, `AUTH_PERMISO_YA_EXISTE`, `AUTH_PERMISO_EN_USO`, etc.) |
 | `422` | Validación fallida | Error del contrato con array `errores` |
 | `423` | Recurso bloqueado | `AUTH_CUENTA_BLOQUEADA` (tras múltiples intentos fallidos) |
 | `429` | Rate limit | `COMUN_LIMITE_PETICIONES` |
@@ -209,7 +209,7 @@ DELETE /api/admin/roles/.../permisos/...   → 204 No Content
 
 ## Rate limiting
 
-Los endpoints `POST /api/auth/login`, `POST /api/auth/forgot-password` y `POST /api/auth/reset-password` están limitados a **5 requests por minuto por IP** (configurable vía `@nestjs/throttler`). Excedido → `429` con `codigo: "COMUN_LIMITE_PETICIONES"`.
+Hay un límite global de **60 requests por minuto por IP** en cualquier endpoint (vía `@nestjs/throttler`). Algunos endpoints sensibles tienen límites más estrictos con `@Throttle`: `POST /api/auth/forgot-password` a **3/min** y `POST /api/auth/reset-password` a **5/min**. `POST /api/auth/login` usa el límite global (60/min). Excedido → `429` con `codigo: "COMUN_LIMITE_PETICIONES"`.
 
 ## Correlation ID
 

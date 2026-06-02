@@ -45,7 +45,7 @@ Content-Type: application/json
 | 409 | `AUTH_CUENTA_SUSPENDIDA` / `AUTH_CUENTA_INACTIVA` | Credenciales correctas pero la cuenta no está habilitada (se revela solo tras validar la password). |
 | 423 | `AUTH_CUENTA_BLOQUEADA` | Bloqueo por múltiples intentos fallidos. |
 | 422 | `COMUN_VALIDACION_FALLIDA` | DTO inválido (identificador o password vacío). |
-| 429 | `COMUN_LIMITE_PETICIONES` | Más de 5 intentos por minuto desde la misma IP. |
+| 429 | `COMUN_LIMITE_PETICIONES` | Más de 60 intentos por minuto desde la misma IP (límite global). |
 
 ## POST /api/auth/refresh
 

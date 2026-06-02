@@ -22,11 +22,14 @@ Content-Type: application/json
   "email": "nueva@hagemsa.com",
   "nombreUsuario": "nueva.cuenta",
   "nombreCompleto": "Nueva Cuenta",
-  "tipoCuenta": "interno"
+  "tipoCuenta": "interno",
+  "documentoIdentidad": "12345678"
 }
 ```
 
 > `nombreUsuario` es **obligatorio y único**: 3-30 caracteres, empieza con letra, solo letras, dígitos, punto, guion o guion bajo (sin `@`). Se normaliza a minúsculas y es **inmutable**. Sirve como identificador alternativo al email en el login.
+>
+> `documentoIdentidad` es **opcional** (string, máximo 50 caracteres). Los demás campos (`email`, `nombreUsuario`, `nombreCompleto`, `tipoCuenta`) son obligatorios.
 
 **Response 201:**
 

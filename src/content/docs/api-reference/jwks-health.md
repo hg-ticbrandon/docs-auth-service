@@ -81,7 +81,11 @@ Diagnóstico sanitizado del runtime. Útil para verificar config en producción 
 
 ```json
 {
+  "service": "hagemsa-auth-service",
   "version": "0.1.0",
+  "nodeVersion": "v22.11.0",
+  "uptime": 1234.56,
+  "memory": { "rss": 123456789, "heapUsed": 45678901 },
   "config": {
     "logFormat": "json",
     "swaggerEnabled": true,
@@ -89,7 +93,8 @@ Diagnóstico sanitizado del runtime. Útil para verificar config en producción 
     "sendgridConfigured": true,
     "jwtIssuer": "https://auth.hagemsa.com",
     "jwtAccessTtlSeconds": 3600
-  }
+  },
+  "jwksKid": "2026-05-rsa-1"
 }
 ```
 

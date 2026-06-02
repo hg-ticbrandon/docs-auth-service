@@ -118,7 +118,7 @@ Actualiza nombre y/o descripcion del rol. Ambos opcionales — solo se aplican l
 | HTTP | `codigo` | Cuándo |
 |---|---|---|
 | 404 | `AUTH_ROL_NO_ENCONTRADO` | El id no corresponde a un rol. |
-| 409 | `AUTH_ROL_DE_SISTEMA_PROTEGIDO` | Es un rol de sistema — su nombre y descripción son inmutables. |
+| 403 | `AUTH_ROL_DE_SISTEMA_PROTEGIDO` | Es un rol de sistema — su nombre y descripción son inmutables. |
 | 409 | `AUTH_ROL_YA_EXISTE` | El nuevo nombre coincide con otro rol existente. |
 | 400 | `AUTH_ROL_NOMBRE_INVALIDO` | Nuevo nombre no cumple UPPER_SNAKE_CASE. |
 
@@ -126,7 +126,7 @@ Actualiza nombre y/o descripcion del rol. Ambos opcionales — solo se aplican l
 
 Elimina un rol custom. Dos guardas:
 
-1. **Roles de sistema** no se pueden eliminar — `409 AUTH_ROL_DE_SISTEMA_PROTEGIDO`.
+1. **Roles de sistema** no se pueden eliminar — `403 AUTH_ROL_DE_SISTEMA_PROTEGIDO`.
 2. **Roles con historial de asignaciones** (activas, expiradas o revocadas) no se pueden eliminar para preservar la auditoría — `409 AUTH_ROL_EN_USO`. El admin debe asegurarse de no tener asignaciones referenciando el rol antes de borrarlo.
 
 Cuando un rol se elimina exitosamente, sus filas en `role_permissions` cascadean (se borran por FK).
@@ -138,7 +138,7 @@ Cuando un rol se elimina exitosamente, sus filas en `role_permissions` cascadean
 | HTTP | `codigo` | Cuándo |
 |---|---|---|
 | 404 | `AUTH_ROL_NO_ENCONTRADO` | El id no corresponde a un rol. |
-| 409 | `AUTH_ROL_DE_SISTEMA_PROTEGIDO` | Es un rol canónico. |
+| 403 | `AUTH_ROL_DE_SISTEMA_PROTEGIDO` | Es un rol canónico. |
 | 409 | `AUTH_ROL_EN_USO` | El rol tiene asignaciones en el historial. `detalle` indica cuántas. |
 
 ## POST /api/admin/roles/:id/permisos
