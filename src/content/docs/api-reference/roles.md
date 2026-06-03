@@ -51,7 +51,7 @@ Crea un nuevo rol. Toda la administración de roles se hace desde el frontend (n
 
 ## GET /api/admin/roles
 
-Lista todos los roles. El catálogo es chico (~10-20 items) → respuesta single-page.
+Lista los roles con **paginación estándar** (§7.5.3). Query params opcionales: `pagina` (default `1`) y `limite` (default `20`, máximo `100`). Ordenados por nombre ascendente.
 
 **Response 200:**
 
@@ -70,7 +70,7 @@ Lista todos los roles. El catálogo es chico (~10-20 items) → respuesta single
   ],
   "paginacion": {
     "pagina": 1,
-    "limite": 11,
+    "limite": 20,
     "total": 11,
     "totalPaginas": 1,
     "tieneSiguiente": false,
