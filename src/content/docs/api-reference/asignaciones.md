@@ -1,6 +1,6 @@
 ---
 title: Asignaciones de rol (admin)
-description: Asignar roles a cuentas, con scopes opcionales, y revocar asignaciones.
+description: Asignar roles a cuentas, con scopes opcionales, editar el scope y revocar asignaciones.
 ---
 
 > Para el formato de errores, paginación y envoltura de respuestas ver [Convenciones de la API](/api-reference/convenciones/).
@@ -82,6 +82,32 @@ Asigna un rol a una cuenta con un scope opcional.
 - `scope` es **JSONB libre**. Convenciones: `{ almacenId: 'lima-1' }`, `{ almacenIds: ['lima-1', 'lima-2'] }` (plural = array), `{}` = sin restricción (global).
 - `expiraEn` es opcional. Si lo pasás, la asignación deja de surtir efecto después de esa fecha (pero permanece en DB para auditoría).
 - Una cuenta puede tener **múltiples asignaciones del mismo rol** con scopes distintos.
+
+## PATCH /api/admin/cuentas/:cuentaId/roles/:asignacionId/scope
+
+Reemplaza el scope de una asignación **existente**, conservando su `id` y su fecha de asignación original. Útil para corregir el alcance de un rol sin tener que revocar y volver a asignar.
+
+**Request:**
+
+```json
+{ "scope": { "almacenId": "lima-2" } }
+```
+
+**Response 204** (sin body).
+
+**Errores:**
+
+| HTTP | `codigo` | Cuándo |
+|---|---|---|
+| 422 | `COMUN_VALIDACION_FALLIDA` | `scope` no es un objeto JSON. |
+| 404 | `AUTH_ASIGNACION_NO_ENCONTRADA` | La asignación no existe. |
+| 409 | `AUTH_ASIGNACION_YA_REVOCADA` | La asignación está revocada — su scope ya no se puede editar. |
+
+**Notas:**
+
+- `scope` sigue las mismas convenciones que en POST: `{}` = sin restricción (rol global), `{ almacenId: 'lima-1' }`, `{ almacenIds: ['lima-1', 'lima-2'] }`.
+- El cambio se registra en el audit log como `asignacion_scope_modificado`.
+- Solo afecta a **nuevos** JWT: los tokens ya emitidos conservan el scope viejo hasta que expiran o se refrescan.
 
 ## POST /api/admin/cuentas/:cuentaId/roles/:asignacionId/revocar
 
