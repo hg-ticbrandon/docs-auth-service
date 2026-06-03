@@ -73,7 +73,7 @@ El Auth Service sigue **Domain-Driven Design (DDD) táctico** con arquitectura *
 | Lenguaje | TypeScript 5.9 estricto (sin `any`, sin `@ts-ignore`) |
 | Framework | NestJS 11 |
 | ORM | Prisma 7 con `@prisma/adapter-pg` |
-| DB | PostgreSQL 16 multi-schema |
+| DB | PostgreSQL 18 multi-schema |
 | Hash | Argon2id (`argon2` 0.44.x) |
 | JWT | `jsonwebtoken` 9.0.x con RS256 |
 | Validación HTTP | `class-validator` + `class-transformer` |

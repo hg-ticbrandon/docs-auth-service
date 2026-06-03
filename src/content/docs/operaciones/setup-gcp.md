@@ -36,7 +36,7 @@ gcloud services enable \
 
 ```bash
 gcloud sql instances create hagemsa-postgresql \
-  --database-version=POSTGRES_16 \
+  --database-version=POSTGRES_18 \
   --tier=db-f1-micro \
   --region=us-central1 \
   --availability-type=REGIONAL \

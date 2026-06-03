@@ -3,7 +3,7 @@ title: Modelo de datos
 description: Schemas, tablas, índices y convenciones de PostgreSQL.
 ---
 
-PostgreSQL 16 con **multi-schema**: 5 schemas, 11 tablas.
+PostgreSQL 18 con **multi-schema**: 5 schemas, 11 tablas.
 
 ## Schemas
 
