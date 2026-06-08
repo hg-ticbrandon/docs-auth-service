@@ -247,11 +247,21 @@ exec node dist/main
 ### 2.6 `cloudbuild.yaml`
 
 No se puede usar `gcloud run deploy --source .` (no permite `--build-arg` y el
-install necesita el token). Por eso este pipeline saca un token fresco, hace
-build pasándolo, push y deploy:
+install necesita el token). Por eso este pipeline: **se asegura de que el repo
+Docker exista** (lo crea si falta, sin tocar lo que ya tenga dentro), saca un
+token fresco, hace build pasándolo, push y deploy:
 
 ```yaml
 steps:
+  - id: ensure-repo
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        gcloud artifacts repositories describe ${_AR_REPO} --location=${_REGION} --project=$PROJECT_ID >/dev/null 2>&1 \
+        || gcloud artifacts repositories create ${_AR_REPO} --repository-format=docker --location=${_REGION} --project=$PROJECT_ID
+
   - id: token
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
     entrypoint: bash
@@ -302,17 +312,43 @@ options:
 > guard van en `--set-env-vars`; los secretos (ej. `AUTH_INTERNAL_SECRET` para la
 > blacklist) con `--set-secrets=...:latest`, nunca en texto plano.
 
+:::note[El step `ensure-repo` es idempotente y seguro]
+`describe || create`: si el repo existe, `describe` corta con `||` y **no se crea
+nada** (las imágenes que ya tenga quedan intactas — pushear solo agrega la tuya);
+si no existe, lo crea con formato docker. Para que pueda crearlo, la **service
+account del build** necesita `artifactregistry.repositories.create` (incluido en
+`roles/artifactregistry.admin` o en `roles/editor`). Si tu SA solo tiene
+`reader`/`writer`, el repo lo tenés que crear a mano una vez (Sección 1.2) y este
+step simplemente lo encontrará.
+:::
+
 ## 3. Construir y desplegar
 
-En **una sola línea** (al partirlo con `\` en Git Bash se rompe):
+En **una sola línea** (al partirlo con `\` se rompe). El `.` final (contexto del
+código) es **obligatorio**.
+
+**Linux / macOS / Git Bash:**
 
 ```bash
 gcloud builds submit --config=cloudbuild.yaml --region=us-central1 --substitutions=_AR_REPO=<REPO_DOCKER>,_SERVICE=<NOMBRE_DEL_SERVICIO>,_TAG=v1 .
 ```
 
-El `.` final (contexto del código) es **obligatorio**. Si tu `cloudbuild.yaml` ya
-trae los defaults, alcanza con:
-`gcloud builds submit --config=cloudbuild.yaml --region=us-central1 .`
+**Windows / PowerShell** — el valor de `--substitutions` **debe ir entre comillas**:
+
+```powershell
+gcloud builds submit --config=cloudbuild.yaml --region=us-central1 --substitutions="_AR_REPO=<REPO_DOCKER>,_SERVICE=<NOMBRE_DEL_SERVICIO>,_TAG=v1" .
+```
+
+:::caution[En PowerShell SIEMPRE comillá las substitutions]
+En PowerShell la coma `,` es el operador de arrays. Sin comillas,
+`--substitutions=_AR_REPO=a,_SERVICE=b,_TAG=v1` se mete **todo en `_AR_REPO`** y
+`_SERVICE`/`_TAG` quedan con sus defaults del yaml → te sale un nombre de imagen
+inválido como `.../repo-test _SERVICE=b _TAG=v1/<NOMBRE_DEL_SERVICIO>:v1`. Las
+comillas lo arreglan.
+:::
+
+Si tu `cloudbuild.yaml` ya trae los defaults correctos (no placeholders), alcanza
+con: `gcloud builds submit --config=cloudbuild.yaml --region=us-central1 .`
 
 ## 4. Verificar
 
@@ -524,9 +560,18 @@ Dejá los placeholders <REPO_DOCKER> y <NOMBRE_DEL_SERVICIO> tal cual: se pasan 
 lanzar el build (NO los resuelvas vos). <REPO_DOCKER> = el código del bounded
 context del backend (ej. bc14, bc01); el Auth Service usa "auth". Solo define en
 qué repo de Artifact Registry se guarda la imagen, no afecta el runtime. En
---set-env-vars usá los NOMBRES de var reales del paso 1e.
+--set-env-vars usá los NOMBRES de var reales del paso 1e. El step ensure-repo crea
+el repo Docker si no existe (idempotente: si ya existe no toca su contenido).
 ```
 steps:
+  - id: ensure-repo
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        gcloud artifacts repositories describe ${_AR_REPO} --location=${_REGION} --project=$PROJECT_ID >/dev/null 2>&1 \
+        || gcloud artifacts repositories create ${_AR_REPO} --repository-format=docker --location=${_REGION} --project=$PROJECT_ID
   - id: token
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
     entrypoint: bash
@@ -590,8 +635,12 @@ PASO 3 — VERIFICÁ y entregá
 - Corré "pnpm run build" y confirmá que produce el archivo del CMD (paso 1b). Si no
   existe, corregí la ruta del CMD/entrypoint.
 - Decime qué variante de Dockerfile usaste y por qué (Prisma sí/no, nativas sí/no).
-- Dame el comando final para lanzar el deploy, en UNA sola línea, con mis valores:
+- Dame el comando final para lanzar el deploy, en UNA sola línea, con mis valores.
+  En bash/Git Bash:
   gcloud builds submit --config=cloudbuild.yaml --region=us-central1 --substitutions=_AR_REPO=<REPO_DOCKER>,_SERVICE=<NOMBRE_DEL_SERVICIO>,_TAG=v1 .
+  En PowerShell (Windows) el valor de --substitutions DEBE ir entre comillas, o la
+  coma se interpreta como operador de arrays y rompe el nombre de la imagen:
+  gcloud builds submit --config=cloudbuild.yaml --region=us-central1 --substitutions="_AR_REPO=<REPO_DOCKER>,_SERVICE=<NOMBRE_DEL_SERVICIO>,_TAG=v1" .
 - Recordame que la service account del build necesita roles/artifactregistry.reader
   sobre hagemsa-npm (proyecto hagemsa-cloud), o el install dará 401.
 ````
