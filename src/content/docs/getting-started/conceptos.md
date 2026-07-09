@@ -13,6 +13,7 @@ Token firmado que prueba quién es el usuario. Se compone de 3 partes (header, p
 {
   "sub": "f98fd200-5db0-40d5-a942-e4a484579b82",
   "email": "juan@hagemsa.com",
+  "username": "jperez",
   "type": "interno",
   "name": "Juan Pérez",
   "jti": "2f6fabe3-2eee-415b-9a95-962f1f448de1",
@@ -28,6 +29,11 @@ Token firmado que prueba quién es el usuario. Se compone de 3 partes (header, p
       ]
     }
   ],
+  "codigoSocio": "BA",
+  "codigoCuenta": "C1",
+  "socioExternoId": 145,
+  "socioNombre": "Juan Pérez",
+  "socioDocumento": "12345678",
   "iss": "https://auth.hagemsa.com",
   "aud": "hagemsa-backends",
   "exp": 1779722400,
@@ -36,6 +42,28 @@ Token firmado que prueba quién es el usuario. Se compone de 3 partes (header, p
 ```
 
 > Cada item de `roles[]` embebe los **permisos efectivos del rol al emitir el JWT**. Los backends consumidores autorizan sin round-trip al Auth Service. Trade-off: cambios al catálogo de permisos no se reflejan hasta que el access token expira y se refresca — con el TTL actual (1 hora, `JWT_ACCESS_TTL_SECONDS`) esa ventana es de máximo 1 hora.
+
+### Campos del payload
+
+| Campo | Presencia | Descripción |
+|---|---|---|
+| `sub` | siempre | ID de la cuenta (uuid). |
+| `email` | siempre | Correo de la cuenta. |
+| `username` | siempre* | Nombre de usuario (login alterno). *Puede faltar en tokens emitidos antes de habilitar login por usuario. |
+| `type` | siempre | `TipoCuenta`: `interno` \| `cliente` \| `proveedor`. |
+| `name` | siempre | Nombre completo. |
+| `jti` | siempre | ID de la sesión (para blacklist/revocación). |
+| `roles` | siempre | Array de `{ role, scope, permisos[] }` con los permisos embebidos. |
+| `codigoSocio` | solo si la cuenta tiene códigos | Código interno de la cuenta, 1-20 alfanuméricos. Para generación de códigos en PDFs. **Independiente del socio.** |
+| `codigoCuenta` | solo si la cuenta tiene códigos | Segundo código interno de la cuenta, 1-20 alfanuméricos. **Independiente del socio.** |
+| `socioExternoId` | solo si hay socio | `personalId` del socio en BC01-socio-negocio. |
+| `socioNombre` | solo si hay socio | Nombre del socio (del snapshot BC01) — para display sin llamar a BC01. |
+| `socioDocumento` | solo si hay socio | Documento del socio (del snapshot BC01). |
+| `iss` / `aud` / `exp` / `iat` | siempre | Estándar JWT (emisor, audiencia, expiración, emitido-en). |
+
+> **Códigos vs. socio son independientes.** `codigoSocio` y `codigoCuenta` son atributos de la **cuenta** (los edita el propio usuario desde su perfil) y aparecen si la cuenta los tiene seteados — **sin importar si hay un socio vinculado**. Son "todo o nada" (ambos o ninguno) y alfanuméricos de 1 a 20 caracteres.
+>
+> Los campos `socioExternoId`, `socioNombre` y `socioDocumento` aparecen **solo cuando la cuenta está vinculada a un socio de negocio (BC01)** (vínculo que gestiona un admin). El nombre/documento provienen de un **snapshot** capturado al vincular (puede quedar desactualizado si BC01 cambia; se refresca al re-vincular). BC01 sigue siendo la fuente de verdad para el maestro completo.
 
 ## JWKS (JSON Web Key Set)
 

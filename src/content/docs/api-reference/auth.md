@@ -1,6 +1,6 @@
 ---
 title: Autenticación
-description: Endpoints públicos para login, refresh, logout y recuperación de password.
+description: Endpoints de login, refresh, logout, recuperación de password y perfil self-service.
 ---
 
 > Para el formato de errores y envoltura de respuestas ver [Convenciones de la API](/api-reference/convenciones/).
@@ -152,3 +152,113 @@ Content-Type: application/json
 | 400 | `AUTH_RESET_TOKEN_INVALIDO` | Token de reset inválido, expirado o ya consumido. |
 | 422 | `AUTH_PASSWORD_NO_CUMPLE_POLITICA` | Password no cumple la política (mínimo 8 chars, al menos 1 mayúscula y 1 número). |
 | 429 | `COMUN_LIMITE_PETICIONES` | Más de 5 intentos por minuto desde la misma IP. |
+
+## Perfil (self-service)
+
+Endpoints para que la **cuenta autenticada** gestione su propio perfil. Todos
+**requieren `Authorization: Bearer <accessToken>`** y operan siempre sobre la
+cuenta del token — nunca sobre un id de la URL. Un usuario solo puede ver y
+editar **su** perfil.
+
+### GET /api/auth/perfil
+
+Devuelve los datos de la cuenta autenticada, incluidos sus códigos internos y —
+si tiene— el socio de negocio (BC01) vinculado.
+
+**Request:**
+
+```http
+GET /api/auth/perfil
+Authorization: Bearer <accessToken>
+```
+
+**Response 200:**
+
+```json
+{
+  "datos": {
+    "id": "8c1d...e9",
+    "email": "juan@hagemsa.com",
+    "nombreUsuario": "juanperez",
+    "nombreCompleto": "Juan Pérez",
+    "tipoCuenta": "interno",
+    "estado": "activo",
+    "documentoIdentidad": "12345678",
+    "codigoSocio": "BA",
+    "codigoCuenta": "C1",
+    "createdAt": "2026-05-26T16:45:12.123Z",
+    "updatedAt": "2026-07-09T16:15:25.888Z",
+    "socio": {
+      "socioExternoId": 145,
+      "tipo": "empleado",
+      "nombre": "Juan Pérez",
+      "documento": "12345678",
+      "snapshot": { "…": "objeto completo de BC01" }
+    }
+  }
+}
+```
+
+> `codigoSocio` / `codigoCuenta` son `null` si la cuenta no tiene códigos. `socio`
+> aparece solo si la cuenta está vinculada a un socio de BC01.
+
+### PATCH /api/auth/perfil/codigos
+
+Setea, edita o limpia los **códigos internos** de la cuenta (para generación de
+códigos en PDFs). Son "todo o nada": ambos presentes (setear/editar) o ambos
+`null` (limpiar). Alfanuméricos de **1 a 20** caracteres, distintos entre sí, y
+únicos en todo el sistema (un código no puede repetirse en ninguna cuenta).
+
+**Request (setear/editar):**
+
+```http
+PATCH /api/auth/perfil/codigos
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{ "codigoSocio": "BA", "codigoCuenta": "C1" }
+```
+
+**Request (limpiar):** `{ "codigoSocio": null, "codigoCuenta": null }`
+
+**Response 204** (sin body).
+
+> **Importante — refresco del token:** los códigos viajan dentro del JWT. El
+> access token vigente **no** cambia al guardar; el cambio se refleja recién al
+> refrescar. El frontend (BFF) fuerza un `POST /api/auth/refresh` tras un cambio
+> exitoso para que los backends que leen los códigos del JWT (ej. generación de
+> PDFs) los vean al instante, sin re-login.
+
+**Errores:**
+
+| HTTP | `codigo` | Cuándo |
+|---|---|---|
+| 400 | `AUTH_CODIGO_INVALIDO` | Formato inválido, o se envió solo uno de los dos códigos. |
+| 409 | `AUTH_SOCIO_CODIGO_YA_USADO` | Uno de los códigos ya lo usa otra cuenta. |
+| 422 | `AUTH_SOCIO_DATOS_INVALIDOS` | Los dos códigos son iguales entre sí. |
+| 401 | `COMUN_NO_AUTENTICADO` | Falta o es inválido el Bearer. |
+
+### PATCH /api/auth/perfil/password
+
+Cambia la contraseña de la cuenta autenticada **probando la contraseña actual**
+(distinto del reset por email). No rota el token.
+
+**Request:**
+
+```http
+PATCH /api/auth/perfil/password
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{ "passwordActual": "Segura123", "passwordNueva": "NuevaSegura456" }
+```
+
+**Response 204** (sin body).
+
+**Errores:**
+
+| HTTP | `codigo` | Cuándo |
+|---|---|---|
+| 401 | `AUTH_CREDENCIALES_INVALIDAS` | La contraseña actual es incorrecta (mensaje genérico). |
+| 422 | `AUTH_PASSWORD_NO_CUMPLE_POLITICA` | La nueva contraseña no cumple la política (mínimo 8 chars). |
+| 401 | `COMUN_NO_AUTENTICADO` | Falta o es inválido el Bearer. |

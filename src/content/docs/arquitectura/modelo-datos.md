@@ -3,17 +3,18 @@ title: Modelo de datos
 description: Schemas, tablas, índices y convenciones de PostgreSQL.
 ---
 
-PostgreSQL 18 con **multi-schema**: 5 schemas, 11 tablas.
+PostgreSQL 18 con **multi-schema**: 6 schemas, 13 tablas.
 
 ## Schemas
 
 | Schema | Bounded context | Tablas |
 |---|---|---|
-| `identity` | identity | `accounts` |
+| `identity` | identity | `accounts`, `account_codes` |
 | `credentials` | credentials | `passwords`, `password_reset_tokens` |
 | `authorization` | authorization | `roles`, `permissions`, `role_permissions`, `user_role_assignments` |
 | `sessions` | sessions | `active_sessions`, `refresh_tokens`, `revoked_jtis` |
 | `audit` | audit | `auth_events` |
+| `socio_negocio` | socio-negocio | `socio_links` |
 
 > `authorization` es una palabra reservada en PG; siempre se escribe entre comillas: `"authorization"`.
 
@@ -53,6 +54,48 @@ created_by           UUID
 **Índices:** `email`, `username` (único), `status`, `account_type`.
 
 > `username` es el nombre de usuario para login (alternativa al email). Único, inmutable, validado en el dominio por el value object `NombreUsuario` (3-30 chars, empieza con letra, `[a-z0-9._-]`, sin `@`).
+
+### identity.account_codes
+
+Los dos códigos internos de la cuenta (`codigoSocio` y `codigoCuenta`), usados
+para generación de códigos en PDFs. **Son atributos de la cuenta, independientes
+del vínculo con el socio de BC01** (una cuenta puede tener códigos sin socio). El
+usuario los edita desde su perfil.
+
+```sql
+code        VARCHAR(20) PRIMARY KEY,             -- el valor del código
+account_id  UUID NOT NULL REFERENCES identity.accounts ON DELETE CASCADE,
+tipo        VARCHAR(10) NOT NULL,                -- 'socio' | 'cuenta'
+UNIQUE (account_id, tipo)                        -- un código de cada tipo por cuenta
+```
+
+**Índices:** `(account_id)`, `(account_id, tipo)` (único).
+
+> **Pool único global:** `code` es la PK de la tabla, así que un mismo valor **no
+> puede repetirse en ningún código de ninguna cuenta** (ni de socio ni de cuenta).
+> Los códigos son alfanuméricos de 1 a 20 caracteres (VO `Codigo`), "todo o nada"
+> (ambos o ninguno) y distintos entre sí dentro de una cuenta.
+
+### socio_negocio.socio_links
+
+Vínculo entre una cuenta (identity) y un socio de negocio del BC externo
+**BC01-socio-negocio**. No duplica el maestro del socio: guarda la referencia
+(`socio_externo_id` = personalId de BC01), el tipo y un snapshot de display. Lo
+gestiona un admin (no el usuario).
+
+```sql
+id              UUID PRIMARY KEY,
+account_id      UUID UNIQUE NOT NULL,            -- una cuenta ↔ un socio
+socio_externo_id INTEGER UNIQUE NOT NULL,        -- personalId en BC01
+tipo            VARCHAR(20) DEFAULT 'empleado',
+socio_snapshot  JSONB,                           -- foto de display de BC01 (nullable)
+created_at      TIMESTAMPTZ DEFAULT now(),
+updated_at      TIMESTAMPTZ NOT NULL
+```
+
+> Antes los códigos vivían en `socio_negocio.socio_codes`; la migración
+> `mover-codigos-a-cuenta` (2026-07-09) los movió a `identity.account_codes` y
+> desacopló los códigos del vínculo con el socio.
 
 ### credentials.passwords
 

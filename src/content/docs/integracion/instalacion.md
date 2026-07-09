@@ -143,6 +143,37 @@ función en el `pnpm install` del build.
   Cloud Run corre esa imagen. El token se consumió en el paso de build; el
   contenedor en producción nunca lo ve.
 
+### 1.5 Actualizar a una versión nueva
+
+`pnpm add @hagemsa/auth-guard` (sin versión) instala la **última**. Si ya la
+tenés y querés **subir de versión** (o fijar una concreta), pasá la versión y
+regenerá el lockfile:
+
+```bash
+# generá el token primero (igual que en el install)
+export GOOGLE_NPM_TOKEN="$(gcloud auth print-access-token)"   # PowerShell: $env:GOOGLE_NPM_TOKEN = (gcloud auth print-access-token)
+
+pnpm add @hagemsa/auth-guard@0.2.0     # sube package.json + pnpm-lock.yaml
+```
+
+Después **redeployá** tu backend (ej. `gcloud builds submit ...`). El build corre
+`pnpm install --frozen-lockfile`, así que **sin** actualizar el lockfile seguirías
+trayendo la versión vieja. Ver el [historial de versiones](/operaciones/publicar-libreria/#historial-de-versiones)
+para saber qué trae cada una.
+
+:::note[Versión 0.2.0 — códigos y socio de negocio]
+Desde **0.2.0**, el `AuthContext` expone campos opcionales adicionales. Si tu
+backend los necesita, instalá `@hagemsa/auth-guard@^0.2.0`:
+
+- `codigoSocio`, `codigoCuenta` — códigos internos de la **cuenta** (para PDFs),
+  1-20 alfanuméricos. **Independientes del socio**: presentes si la cuenta los
+  tiene, con o sin socio vinculado.
+- `socioExternoId`, `socioNombre`, `socioDocumento` — presentes solo si la cuenta
+  tiene un socio de BC01 vinculado.
+
+En cuentas sin códigos / sin socio, llegan como `undefined`.
+:::
+
 ## 2. Variables de entorno
 
 Agregá a tu `.env`:

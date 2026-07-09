@@ -87,6 +87,13 @@ export class PerfilController {
 }
 ```
 
+`AuthContext` también expone `name`, `jti`, `expiresAt` y estos campos opcionales:
+
+- `codigoSocio` y `codigoCuenta` — códigos internos de la **cuenta** (para generación de códigos en PDFs), alfanuméricos de 1 a 20. Presentes solo si la cuenta los tiene seteados. **Son independientes del socio**: una cuenta puede tener códigos sin estar vinculada a BC01.
+- `socioExternoId`, `socioNombre` y `socioDocumento` — presentes **solo si la cuenta está vinculada a un socio de negocio (BC01)**; los dos últimos vienen del snapshot capturado al vincular.
+
+En cuentas sin códigos / sin socio, los campos respectivos llegan como `undefined`.
+
 ## @RequirePermission
 
 Exige que el JWT incluya un rol cuyo set de permisos contiene el código indicado.

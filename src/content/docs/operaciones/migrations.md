@@ -92,6 +92,78 @@ Applying migration `20260520192033_add_refresh_tokens`
 Applying migration `20260520204914_add_audit_and_reset_tokens`
 ```
 
+## 4.b Caso especial: la migración crea un schema nuevo
+
+Cuando una migración agrega un **bounded context nuevo** (un schema PG que antes no existía, ej. `socio_negocio`), hay dos cosas que el flujo normal **NO** cubre y hay que hacer a mano:
+
+1. **Crear el schema.** No hace falta paso extra: `auth_migrator` tiene privilegio `CREATE` sobre la base (`has_database_privilege(current_user, current_database(), 'CREATE') = true`), así que el `CREATE SCHEMA IF NOT EXISTS` que Prisma pone al inicio del `migration.sql` se ejecuta solo durante `migrate deploy`. El schema queda **owned by `auth_migrator`**.
+
+2. **Otorgar permisos al runtime `auth_service`.** Los `GRANT` y `ALTER DEFAULT PRIVILEGES` de [Setup GCP §3.3](/operaciones/setup-gcp/) están acotados a los **5 schemas originales** (`identity`, `credentials`, `authorization`, `sessions`, `audit`). Un schema nuevo **no está incluido**, así que `auth_service` no puede ni leerlo. Sin este paso, el servicio arranca pero tira `permission denied for schema <nuevo>` en la primera query.
+
+Como `auth_migrator` es **dueño** del schema nuevo, puede otorgar los permisos él mismo (no hace falta `postgres`). Con el proxy arriba y en **otra terminal**:
+
+```bash
+psql "postgresql://auth_migrator:<password-url-encoded>@127.0.0.1:5433/db_auth_service" <<'SQL'
+-- Reemplazar <schema> por el nombre del schema nuevo (ej. socio_negocio)
+GRANT USAGE ON SCHEMA <schema> TO auth_service;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA <schema> TO auth_service;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA <schema> TO auth_service;
+
+-- Para las tablas que auth_migrator cree a futuro en este schema (próximas migraciones).
+-- Un rol puede setear sus propios default privileges, así que NO hace falta el
+-- `GRANT auth_migrator TO postgres` que sí usa el setup inicial.
+ALTER DEFAULT PRIVILEGES FOR ROLE auth_migrator IN SCHEMA <schema>
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO auth_service;
+ALTER DEFAULT PRIVILEGES FOR ROLE auth_migrator IN SCHEMA <schema>
+  GRANT USAGE ON SEQUENCES TO auth_service;
+SQL
+```
+
+**Verificar** que quedó bien (debe devolver `t` en todo):
+
+```sql
+SELECT
+  has_schema_privilege('auth_service', '<schema>', 'USAGE')                    AS schema_usage,
+  has_table_privilege('auth_service', '<schema>.<alguna_tabla>', 'SELECT')     AS tabla_select,
+  has_table_privilege('auth_service', '<schema>.<alguna_tabla>', 'INSERT')     AS tabla_insert;
+```
+
+:::note[Ownership del schema nuevo]
+El schema queda owned por `auth_migrator` (los 5 originales son de `postgres`). Funciona perfecto — los grants de arriba son suficientes. Si querés uniformar el ownership con el resto, corré como `postgres`:
+```sql
+ALTER SCHEMA <schema> OWNER TO postgres;
+```
+Requiere la password de `postgres` (no la de `auth_migrator`), por eso es opcional y no bloquea el deploy.
+:::
+
+:::caution[Orden vs. el deploy de Cloud Run]
+Hacé `migrate deploy` **y** estos grants **antes** de deployar la imagen que usa el schema nuevo. La migración es aditiva, así que la imagen vieja la ignora sin romperse; pero la imagen nueva sin los grants sí falla.
+:::
+
+> **Precedente aplicado:** el schema `socio_negocio` (feature de vínculo con BC01 / códigos de socio) se creó así el 2026-07-02.
+
+## 4.c Caso normal: agregar una columna a una tabla existente
+
+Para contrastar con 4.b: **agregar columnas (o índices) a tablas de un schema que ya existe NO requiere ningún paso extra.** Es el flujo estándar de la sección 4, sin grants adicionales.
+
+Por qué no hacen falta grants: los `GRANT ... ON ALL TABLES` de `auth_service` son a **nivel de tabla**, y una columna nueva **hereda** automáticamente los privilegios de su tabla (salvo que se hubieran usado grants por-columna, cosa que acá nunca hacemos). Es decir, `auth_service` puede leer/escribir la columna nueva apenas se crea.
+
+```bash
+# Con el proxy arriba y DATABASE_URL apuntando a auth_migrator:
+pnpm prisma migrate deploy
+```
+
+**Verificación opcional** (debe devolver `t` en los tres) — útil para confirmar la herencia de permisos:
+
+```sql
+SELECT
+  has_column_privilege('auth_service', '<schema>.<tabla>', '<columna>', 'SELECT') AS svc_select,
+  has_column_privilege('auth_service', '<schema>.<tabla>', '<columna>', 'INSERT') AS svc_insert,
+  has_column_privilege('auth_service', '<schema>.<tabla>', '<columna>', 'UPDATE') AS svc_update;
+```
+
+> **Precedente aplicado:** la migración `20260702181916_agregar_snapshot_socio` agregó la columna `socio_snapshot JSONB` (nullable) a `socio_negocio.socio_links` — snapshot de display del socio de BC01 para no depender de BC01 al emitir el token. Aplicada a producción el 2026-07-02 con solo `migrate deploy` (sin grants nuevos; `auth_service` heredó SELECT/INSERT/UPDATE de la tabla).
+
 ## 5. Generar Prisma Client (si cambió el schema)
 
 ```bash
@@ -127,10 +199,30 @@ Cada vez que cambies `prisma/schema.prisma`:
 
 ## Reglas inquebrantables
 
-- **NUNCA editar manualmente** las migrations en `prisma/migrations/`. Si está mal, borrar la migration completa y regenerar con `migrate dev`.
+- **NUNCA editar manualmente** las migrations que genera Prisma para cambios de **estructura**. Si está mal, borrar la migration completa y regenerar con `migrate dev`.
 - **Una migration por feature.** No mezclar cambios no relacionados.
 - **Nombre de migration descriptivo y en español.** Ej: `agregar-tabla-refresh-tokens`.
 - **Producción: solo `migrate deploy`**, nunca `migrate dev`.
+
+### Excepción: migraciones de datos
+
+Cuando además de cambiar la estructura hay que **mover o transformar datos**
+(ej. mover una columna de una tabla a otra), Prisma **no** genera el SQL de datos.
+El flujo sancionado es:
+
+1. `pnpm prisma migrate dev --create-only --name <descripcion>` — genera la
+   migration **sin aplicarla**.
+2. **Editar el `migration.sql`** para intercalar el `INSERT ... SELECT` (u otro
+   SQL de datos) en el orden correcto: crear lo nuevo → mover datos → borrar lo
+   viejo. Este es el **único** caso en que se edita una migration a mano.
+3. Aplicar con `migrate deploy` (o `migrate dev` en local).
+
+> **Precedente aplicado:** la migración `20260709160357_mover_codigos_a_cuenta`
+> (2026-07-09) movió los códigos internos de `socio_negocio.socio_codes` a la
+> nueva tabla `identity.account_codes` (desacoplando los códigos del vínculo con
+> el socio). El SQL generado dropeaba la tabla vieja **antes** de crear la nueva;
+> se reordenó a mano a: crear `account_codes` → `INSERT ... SELECT` desde
+> `socio_codes` (join con `socio_links`) → drop `socio_codes`.
 
 ## Próximo paso
 

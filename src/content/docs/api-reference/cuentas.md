@@ -31,6 +31,23 @@ Content-Type: application/json
 >
 > `documentoIdentidad` es **opcional** (string, máximo 50 caracteres). Los demás campos (`email`, `nombreUsuario`, `nombreCompleto`, `tipoCuenta`) son obligatorios.
 
+**Campos opcionales adicionales:**
+
+- `codigoSocio`, `codigoCuenta` — códigos internos de la cuenta (1-20 alfanuméricos, "todo o nada"). Independientes del socio. También los puede editar el propio usuario luego desde [su perfil](/api-reference/auth/#patch-apiauthperfilcodigos).
+- `socioExternoId` (entero), `tipoSocio` (`empleado` \| `cliente` \| `proveedor`), `socioSnapshot` (objeto de BC01) — vinculan la cuenta a un socio de negocio de BC01. Independientes de los códigos.
+
+```json
+{
+  "email": "nueva@hagemsa.com",
+  "nombreUsuario": "nueva.cuenta",
+  "nombreCompleto": "Nueva Cuenta",
+  "tipoCuenta": "interno",
+  "codigoSocio": "BA",
+  "codigoCuenta": "C1",
+  "socioExternoId": 145
+}
+```
+
 **Response 201:**
 
 ```json

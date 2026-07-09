@@ -124,3 +124,26 @@ y reintentá.
 Para un paquete de decenas de KB el costo es **efectivamente $0**: cae dentro del
 free tier de Artifact Registry (0.5 GB de almacenamiento). El egress hacia
 consumidores dentro de GCP es mínimo.
+
+## Historial de versiones
+
+| Versión | Fecha | Cambios |
+|---|---|---|
+| **0.2.0** | 2026-07-02 | Agrega al `AuthContext` y al `JwtPayload` los campos del **socio de negocio (BC01)**, presentes **solo si la cuenta tiene un socio vinculado**: `codigoSocio`, `codigoCuenta`, `socioExternoId`, `socioNombre`, `socioDocumento`. Cambio **aditivo** (campos opcionales): los consumidores en `0.1.0` **no se rompen**; para leer los campos nuevos hay que subir a `^0.2.0`. |
+| **0.1.0** | 2026-05-29 | Versión inicial: `JwtAuthGuard`, decoradores `@CurrentUser` / `@Public` / `@RequirePermission` / `@RequireScope`, `AuthGuardModule`, cache de JWKS y `BlacklistChecker`. |
+
+:::note[Semántica actual de `codigoSocio` / `codigoCuenta`]
+La **forma** del tipo `AuthContext` / `JwtPayload` no cambió desde 0.2.0 (los
+campos siguen ahí, opcionales), pero a partir del **2026-07-09** cambió su
+**semántica** en el auth-service: `codigoSocio` y `codigoCuenta` pasaron a ser
+**códigos de la cuenta, independientes del socio** (antes solo aparecían con un
+socio vinculado). Ahora aparecen si la cuenta los tiene, con o sin socio, y
+admiten **1 a 20 caracteres** (antes 2). No requiere subir de versión el lib: el
+guard solo los lee del JWT.
+:::
+
+:::note[Cómo consume esto un backend]
+Publicar una versión **no** actualiza a los consumidores automáticamente. Cada
+backend debe subir su dependencia (`pnpm add @hagemsa/auth-guard@<versión>`),
+regenerar su lockfile y **redeployar**. Ver [Instalación → Actualizar a una versión nueva](/integracion/instalacion/).
+:::
