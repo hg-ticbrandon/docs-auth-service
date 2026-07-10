@@ -9,6 +9,10 @@ backend** sin un usuario en el medio (un job, un consumidor de cola, una
 sincronización), no hay token de usuario que reenviar. Para eso existen los
 **clientes de servicio** y el grant **OAuth2 client credentials**.
 
+> ¿Preferís seguir un caso concreto de punta a punta (crear el cliente → pedir el
+> token → ver el `200` en el otro backend)? Andá directo al
+> [Ejemplo end-to-end (M2M)](/integracion/m2m-ejemplo/).
+
 ## Cómo funciona
 
 1. Un admin crea un **cliente de servicio** en el Auth Service y le asigna los

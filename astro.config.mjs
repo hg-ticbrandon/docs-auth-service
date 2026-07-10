@@ -39,6 +39,7 @@ export default defineConfig({
             { label: 'Proteger endpoints', slug: 'integracion/proteger-endpoints' },
             { label: 'Permisos y scopes', slug: 'integracion/permisos-scopes' },
             { label: 'Backend-a-backend (M2M)', slug: 'integracion/m2m' },
+            { label: 'Ejemplo end-to-end (M2M)', slug: 'integracion/m2m-ejemplo' },
             { label: 'Revocación y logout', slug: 'integracion/revocacion' },
             { label: 'Desplegar a Cloud Run', slug: 'integracion/deploy-consumidor' },
             { label: 'Errores comunes', slug: 'integracion/errores-comunes' },
