@@ -159,6 +159,65 @@ Actualiza nombre o documento de identidad. Requiere `auth:account:write`.
 
 **Errores:** `404` `AUTH_CUENTA_NO_ENCONTRADA`, `409` `AUTH_CUENTA_INACTIVA`.
 
+## PATCH /api/admin/cuentas/:id/codigos
+
+Setea, edita o limpia los **códigos internos** de la cuenta (para generación de
+códigos en PDFs). Independientes del socio de BC01. "Todo o nada": ambos
+presentes (setear/editar) o ambos `null` (limpiar). Alfanuméricos de 1 a 20,
+distintos entre sí y únicos en todo el sistema. Requiere `auth:account:write`.
+
+Equivalente admin del self-service [`PATCH /api/auth/perfil/codigos`](/api-reference/auth/#patch-apiauthperfilcodigos),
+pero operando sobre la cuenta del `:id`. El cambio se refleja en el JWT del
+usuario objetivo recién en su próximo login/refresh (el admin no puede forzar el
+refresco del token de otro usuario).
+
+**Request (setear/editar):**
+
+```json
+{ "codigoSocio": "BA", "codigoCuenta": "C1" }
+```
+
+**Request (limpiar):** `{ "codigoSocio": null, "codigoCuenta": null }`
+
+**Response 204** (sin body).
+
+**Errores:**
+
+| HTTP | `codigo` | Cuándo |
+|---|---|---|
+| 400 | `AUTH_CODIGO_INVALIDO` | Formato inválido, o se envió solo uno de los dos códigos. |
+| 409 | `AUTH_SOCIO_CODIGO_YA_USADO` | Uno de los códigos ya lo usa otra cuenta. |
+| 404 | `AUTH_CUENTA_NO_ENCONTRADA` | El id no corresponde a una cuenta. |
+
+## POST /api/admin/cuentas/:id/vincular-socio
+
+Vincula un socio de negocio (BC01) a una cuenta **ya existente**. Vínculo 1:1:
+falla si la cuenta ya tiene socio o el socio ya está vinculado a otra cuenta.
+Requiere `auth:account:write`.
+
+**Request:**
+
+```json
+{
+  "socioExternoId": 145,
+  "tipoSocio": "empleado",
+  "socioSnapshot": { "…": "objeto completo de BC01" }
+}
+```
+
+- `socioExternoId` (obligatorio): `personalId` del socio en BC01.
+- `tipoSocio` (opcional): `empleado` \| `cliente` \| `proveedor` (default `empleado`).
+- `socioSnapshot` (opcional): objeto de BC01 para denormalizar nombre/documento.
+
+**Response 204** (sin body).
+
+**Errores:**
+
+| HTTP | `codigo` | Cuándo |
+|---|---|---|
+| 409 | `AUTH_SOCIO_YA_VINCULADO` | La cuenta ya tiene socio, o el socio ya está vinculado a otra cuenta (mismo código para ambos). |
+| 404 | `AUTH_CUENTA_NO_ENCONTRADA` | El id no corresponde a una cuenta. |
+
 ## DELETE /api/admin/cuentas/:id
 
 Desactiva la cuenta (soft delete: marca `estado=inactivo`). Requiere `auth:account:write`.
