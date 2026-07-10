@@ -115,6 +115,28 @@ export class WmsClient {
 `invalidar()` descarta el token cacheado (útil si recibís un `401` inesperado y
 querés forzar una re-emisión).
 
+### Secret vs token: dos ciclos de vida distintos
+
+Es la confusión más común. El `secret` y el token (JWT) **no** son lo mismo y se
+administran distinto:
+
+| | **Secret** (`cs_…`) | **Token de servicio** (JWT) |
+|---|---|---|
+| Qué es | La **credencial** de largo plazo del cliente (como una password) | Un JWT de vida corta que el secret te consigue |
+| Vencimiento | **No vence por defecto** (`expira_en = null`); solo si lo revocás o lo rotás con "gracia" | **10 min** (`SERVICE_TOKEN_TTL_SECONDS`) |
+| Quién lo administra | **Vos** (admin): rotar / revocar cuando quieras o si se compromete | La **lib** (`ServiceTokenProvider`): lo pide, cachea, renueva ~60s antes de vencer y hace single-flight |
+| Dónde vive | En el **Secret Manager** del backend consumidor | En **memoria** del proceso (no se persiste) |
+
+En una frase: **la lib administra el token automáticamente; el secret lo administrás vos.**
+
+:::caution[Si el secret se revoca o expira, la lib NO consigue otro sola]
+El `ServiceTokenProvider` usa el secret que le diste en la config para pedir
+tokens. Si ese secret deja de valer (lo revocaste, lo rotaste, se comprometió),
+las próximas emisiones fallan con `401` — y ahí sos vos quien **rota el secret,
+actualiza `SVC_CLIENT_SECRET` en el Secret Manager y redeploya**. La lib solo
+renueva el **token** (10 min), nunca el secret.
+:::
+
 ## 3. Restringir por tipo de token (opcional)
 
 Por defecto un endpoint acepta **tokens de usuario y de servicio** — decide por
