@@ -13,6 +13,29 @@ endpoint) con el permiso `wms:inventario:read`. **Cambiá los tres por los tuyos
 (backend origen, backend destino, permiso requerido): el flujo es idéntico.
 :::
 
+:::caution[Dos permisos distintos — no los confundas]
+Hay **dos** permisos en juego, de **actores** y **momentos** distintos:
+
+- **`auth:service-client:write`** → **solo** para **crear/gestionar** el cliente de
+  servicio (pasos 1–2). Lo usa un **admin humano**, **una vez**, contra el Auth
+  Service. **No** interviene en la llamada M2M.
+- **`wms:inventario:read`** (el permiso del endpoint destino) → es el que necesita
+  el **cliente de servicio** (`svc-flota`) **en su token** para que WMS lo autorice
+  (paso 5). Viene del **rol** que le asignás al cliente.
+
+Tres actores:
+
+| # | Actor | Qué necesita | Cuándo |
+|---|---|---|---|
+| ① | Admin humano | `auth:service-client:write` | Setup (una vez) |
+| ② | `svc-flota` (backend) | `clientId` + `clientSecret` (el `POST /api/auth/token` es **público**, sin permiso) | Runtime |
+| ③ | `svc-flota` llamando a WMS | token con `wms:inventario:read` embebido | Runtime |
+
+**WMS no conoce ni exige `auth:service-client:write`** — solo valida el JWT y pide
+`wms:inventario:read`. Y **pedir el token no requiere permiso alguno**: el cliente
+se autentica con su secret, no con permisos.
+:::
+
 ## El escenario
 
 **Flota** corre un **job nocturno** (sin ningún usuario logueado) que necesita
