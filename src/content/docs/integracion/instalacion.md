@@ -153,7 +153,7 @@ regenerá el lockfile:
 # generá el token primero (igual que en el install)
 export GOOGLE_NPM_TOKEN="$(gcloud auth print-access-token)"   # PowerShell: $env:GOOGLE_NPM_TOKEN = (gcloud auth print-access-token)
 
-pnpm add @hagemsa/auth-guard@0.3.0     # sube package.json + pnpm-lock.yaml
+pnpm add @hagemsa/auth-guard@0.3.1     # sube package.json + pnpm-lock.yaml
 ```
 
 Después **redeployá** tu backend (ej. `gcloud builds submit ...`). El build corre
@@ -185,7 +185,7 @@ existentes siguen igual):
   backend obtenga tokens de servicio y llame a otros backends.
 
 Si tu backend va a **llamar** a otro por su cuenta o a **restringir** endpoints
-por tipo de token, subí a `@hagemsa/auth-guard@^0.3.0` y seguí
+por tipo de token, subí a `@hagemsa/auth-guard@^0.3.1` y seguí
 [Comunicación backend-a-backend (M2M)](/integracion/m2m/).
 :::
 

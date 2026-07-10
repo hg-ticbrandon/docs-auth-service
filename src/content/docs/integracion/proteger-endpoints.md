@@ -140,7 +140,7 @@ Comportamiento:
 - Si el rol tiene `scope: { almacenId: 'lima-1' }` y el path es `/inventario/lima-2/items` → **403**.
 - Si el rol tiene `scope: { almacenIds: ['lima-1', 'arequipa-1'] }` (plural = array) → pasa con cualquiera de esos almacenes.
 
-## @ServiceOnly / @UserOnly (opt-in, ≥ 0.3.0)
+## @ServiceOnly / @UserOnly (opt-in, ≥ 0.3.1)
 
 Por default un endpoint acepta **tokens de usuario y de servicio** (M2M) — decide
 por permisos, así el mismo endpoint sirve a personas y a backends. Si querés

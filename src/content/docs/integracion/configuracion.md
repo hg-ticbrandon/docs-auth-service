@@ -104,7 +104,7 @@ AuthGuardModule.forRoot({
 
 `forRoot` valida los tokens que **entran** a tu backend. Si además tu backend
 necesita **llamar** a otro backend protegido por su cuenta (sin un usuario en el
-medio), registrá también `forServiceClient` (≥ 0.3.0). Son independientes: podés
+medio), registrá también `forServiceClient` (≥ 0.3.1). Son independientes: podés
 usar uno, el otro, o los dos.
 
 ```typescript

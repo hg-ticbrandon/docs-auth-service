@@ -61,7 +61,7 @@ del backend consumidor. Detalle completo del CRUD (rotar, revocar, suspender) en
 
 ## 2. Consumir tokens con `ServiceTokenProvider`
 
-La lib `@hagemsa/auth-guard` (≥ 0.3.0) trae un `ServiceTokenProvider` que hace
+La lib `@hagemsa/auth-guard` (≥ 0.3.1) trae un `ServiceTokenProvider` que hace
 trivial la adopción: cachea el token en memoria, lo **renueva proactivamente**
 ~60s antes de vencer y aplica **single-flight** (varias llamadas concurrentes
 disparan un solo `POST /token`).
