@@ -140,6 +140,28 @@ Comportamiento:
 - Si el rol tiene `scope: { almacenId: 'lima-1' }` y el path es `/inventario/lima-2/items` → **403**.
 - Si el rol tiene `scope: { almacenIds: ['lima-1', 'arequipa-1'] }` (plural = array) → pasa con cualquiera de esos almacenes.
 
+## @ServiceOnly / @UserOnly (opt-in, ≥ 0.3.0)
+
+Por default un endpoint acepta **tokens de usuario y de servicio** (M2M) — decide
+por permisos, así el mismo endpoint sirve a personas y a backends. Si querés
+restringir por **tipo de token**, usá estos decoradores opcionales:
+
+```typescript
+import { ServiceOnly, UserOnly } from '@hagemsa/auth-guard';
+
+@ServiceOnly() // solo tokens de servicio; un token de usuario recibe 403
+@Post('sincronizar')
+sincronizar() { /* ... */ }
+
+@UserOnly() // solo tokens de usuario; un token de servicio recibe 403
+@Get('perfil')
+verPerfil() { /* ... */ }
+```
+
+En un handler con token de servicio, `@CurrentUser()` trae `tokenUse: 'service'` y
+`clientId`; `email`/`name`/`type` vienen vacíos. Ver
+[Comunicación backend-a-backend (M2M)](/integracion/m2m/).
+
 ## Combinaciones comunes
 
 | Caso | Decoradores |
@@ -148,6 +170,8 @@ Comportamiento:
 | Endpoint que solo requiere JWT válido | (ninguno extra) |
 | Endpoint con permiso global | `@RequirePermission('mod:rec:accion')` |
 | Endpoint con permiso + scope por almacén | `@RequirePermission(...)` + `@RequireScope({ ... })` |
+| Endpoint solo para backends (M2M) | `@RequirePermission(...)` + `@ServiceOnly()` |
+| Endpoint solo para usuarios finales | `@RequirePermission(...)` + `@UserOnly()` |
 | Endpoint solo accesible vía secret interno | (otro patrón, ver `interno`) |
 
 ## Próximo paso

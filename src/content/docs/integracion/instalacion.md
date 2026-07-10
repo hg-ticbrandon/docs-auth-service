@@ -153,7 +153,7 @@ regenerá el lockfile:
 # generá el token primero (igual que en el install)
 export GOOGLE_NPM_TOKEN="$(gcloud auth print-access-token)"   # PowerShell: $env:GOOGLE_NPM_TOKEN = (gcloud auth print-access-token)
 
-pnpm add @hagemsa/auth-guard@0.2.0     # sube package.json + pnpm-lock.yaml
+pnpm add @hagemsa/auth-guard@0.3.0     # sube package.json + pnpm-lock.yaml
 ```
 
 Después **redeployá** tu backend (ej. `gcloud builds submit ...`). El build corre
@@ -172,6 +172,21 @@ backend los necesita, instalá `@hagemsa/auth-guard@^0.2.0`:
   tiene un socio de BC01 vinculado.
 
 En cuentas sin códigos / sin socio, llegan como `undefined`.
+:::
+
+:::note[Versión 0.3.0 — M2M / tokens de servicio]
+Desde **0.3.0** la lib soporta comunicación **backend-a-backend** (grant client
+credentials). Cambios **aditivos y retrocompatibles** (los tokens de usuario
+existentes siguen igual):
+
+- `tokenUse` (`'user'` \| `'service'`) y `clientId` en `JwtPayload` / `AuthContext`.
+- Decoradores opt-in `@ServiceOnly()` / `@UserOnly()` para restringir por tipo de token.
+- `ServiceTokenProvider` (+ `AuthGuardModule.forServiceClient(...)`) para que tu
+  backend obtenga tokens de servicio y llame a otros backends.
+
+Si tu backend va a **llamar** a otro por su cuenta o a **restringir** endpoints
+por tipo de token, subí a `@hagemsa/auth-guard@^0.3.0` y seguí
+[Comunicación backend-a-backend (M2M)](/integracion/m2m/).
 :::
 
 ## 2. Variables de entorno

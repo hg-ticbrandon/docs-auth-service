@@ -100,6 +100,34 @@ AuthGuardModule.forRoot({
 }),
 ```
 
+## M2M — emitir tokens salientes (`forServiceClient`)
+
+`forRoot` valida los tokens que **entran** a tu backend. Si además tu backend
+necesita **llamar** a otro backend protegido por su cuenta (sin un usuario en el
+medio), registrá también `forServiceClient` (≥ 0.3.0). Son independientes: podés
+usar uno, el otro, o los dos.
+
+```typescript
+// app.module.ts
+AuthGuardModule.forServiceClient({
+  authServiceUrl: process.env.AUTH_SERVICE_URL!,
+  clientId: process.env.SVC_CLIENT_ID!,
+  clientSecret: process.env.SVC_CLIENT_SECRET!, // desde Secret Manager, nunca hardcodeado
+}),
+```
+
+Esto expone un `ServiceTokenProvider` inyectable que obtiene y cachea el token de
+servicio (renovación proactiva + single-flight). El flujo completo —crear el
+cliente de servicio, inyectar el provider, restringir por tipo de token— está en
+[Comunicación backend-a-backend (M2M)](/integracion/m2m/).
+
+| Opción | Tipo | Default | Descripción |
+|---|---|---|---|
+| `authServiceUrl` | string | (requerido) | URL base del Auth Service (ej. `https://auth.hagemsa.com`). |
+| `clientId` | string | (requerido) | clientId del cliente de servicio (ej. `svc-flota`). |
+| `clientSecret` | string | (requerido) | Secret del cliente, desde Secret Manager / env. |
+| `renovarAntesDeSegundos` | number | `60` | Segundos antes de `exp` en que se renueva el token proactivamente. |
+
 ## Próximo paso
 
 [Proteger endpoints →](/integracion/proteger-endpoints/)
