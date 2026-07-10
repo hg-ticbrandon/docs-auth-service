@@ -3,7 +3,7 @@ title: Modelo de datos
 description: Schemas, tablas, índices y convenciones de PostgreSQL.
 ---
 
-PostgreSQL 18 con **multi-schema**: 6 schemas, 13 tablas.
+PostgreSQL 18 con **multi-schema**: 7 schemas, 16 tablas.
 
 ## Schemas
 
@@ -15,6 +15,7 @@ PostgreSQL 18 con **multi-schema**: 6 schemas, 13 tablas.
 | `sessions` | sessions | `active_sessions`, `refresh_tokens`, `revoked_jtis` |
 | `audit` | audit | `auth_events` |
 | `socio_negocio` | socio-negocio | `socio_links` |
+| `service_clients` | service-clients (M2M) | `clients`, `client_secrets`, `client_roles` |
 
 > `authorization` es una palabra reservada en PG; siempre se escribe entre comillas: `"authorization"`.
 
@@ -184,6 +185,52 @@ occurred_at        TIMESTAMPTZ DEFAULT now()
 **Append-only.** Solo INSERTs. Sin UPDATE ni DELETE en ningún flujo.
 
 **Índices:** `(account_id)`, `(event_type)`, `(occurred_at DESC)`.
+
+### service_clients.clients
+
+Cada backend que llama a otro por su cuenta (M2M) es un cliente de servicio.
+
+```sql
+id           UUID PRIMARY KEY,
+client_id    VARCHAR(100) UNIQUE NOT NULL,      -- ^[a-z][a-z0-9-]{2,49}$ (ej. 'svc-flota')
+nombre       VARCHAR(255) NOT NULL,
+descripcion  TEXT,
+estado       VARCHAR(20) DEFAULT 'activo',      -- 'activo' | 'suspendido'
+created_at   TIMESTAMPTZ DEFAULT now(),
+updated_at   TIMESTAMPTZ,
+created_by   UUID
+```
+
+**Índices:** `(client_id)`.
+
+### service_clients.client_secrets
+
+Secretos del cliente (hash **Argon2id**, nunca en claro). Hasta **2 activos** por
+cliente para rotación con solapamiento. `expira_en` / `revocado_en` en `null` = activo.
+
+```sql
+id           UUID PRIMARY KEY,
+client_pk    UUID NOT NULL REFERENCES service_clients.clients ON DELETE CASCADE,
+secret_hash  TEXT NOT NULL,                     -- Argon2id
+etiqueta     VARCHAR(50),
+created_at   TIMESTAMPTZ DEFAULT now(),
+expira_en    TIMESTAMPTZ,                        -- null = no expira por tiempo
+revocado_en  TIMESTAMPTZ                         -- null = no revocado
+```
+
+**Índices:** `(client_pk)`.
+
+### service_clients.client_roles
+
+Roles asignados al cliente (least privilege). `role_id` referencia **lógicamente**
+a `authorization.roles` (sin FK cross-context, igual que `user_role_assignments`).
+
+```sql
+client_pk  UUID NOT NULL REFERENCES service_clients.clients ON DELETE CASCADE,
+role_id    UUID NOT NULL,                        -- lógico → authorization.roles
+scope      JSONB DEFAULT '{}',
+PRIMARY KEY (client_pk, role_id)
+```
 
 ## Migrations
 

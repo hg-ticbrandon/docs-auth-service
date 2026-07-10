@@ -153,6 +153,54 @@ Content-Type: application/json
 | 422 | `AUTH_PASSWORD_NO_CUMPLE_POLITICA` | Password no cumple la política (mínimo 8 chars, al menos 1 mayúscula y 1 número). |
 | 429 | `COMUN_LIMITE_PETICIONES` | Más de 5 intentos por minuto desde la misma IP. |
 
+## POST /api/auth/token
+
+Grant **OAuth2 client credentials** (máquina a máquina). Un backend canjea su
+`clientId` + `clientSecret` por un **token de servicio** de vida corta (10 min)
+con el claim `tokenUse: "service"`. No hay refresh token: al vencer se vuelve a
+pedir con el secret. Público y rate-limited.
+
+Para el flujo completo (crear el cliente, `ServiceTokenProvider`) ver
+[Comunicación backend-a-backend (M2M)](/integracion/m2m/).
+
+**Request:**
+
+```http
+POST /api/auth/token
+Content-Type: application/json
+
+{
+  "grantType": "client_credentials",
+  "clientId": "svc-flota",
+  "clientSecret": "cs_a1b2c3d4..."
+}
+```
+
+**Response 200:**
+
+```json
+{
+  "datos": {
+    "accessToken": "eyJhbGciOiJSUzI1NiIs...",
+    "tokenType": "Bearer",
+    "expiresIn": 600
+  }
+}
+```
+
+> El JWT lleva `tokenUse: "service"`, `clientId`, y los permisos de los roles del
+> cliente embebidos — igual que un token de usuario, así los guards de los
+> backends lo autorizan sin round-trip. No lleva `email`/`name`/`type`.
+
+**Errores:**
+
+| HTTP | `codigo` | Cuándo |
+|---|---|---|
+| 401 | `AUTH_SERVICE_CLIENT_CREDENCIALES_INVALIDAS` | `clientId` o `clientSecret` inválidos, o cliente inexistente. (Mensaje genérico — no enumeramos.) |
+| 409 | `AUTH_SERVICE_CLIENT_SUSPENDIDO` | El cliente de servicio está suspendido. |
+| 422 | `COMUN_VALIDACION_FALLIDA` | Falta `grantType` (debe ser `"client_credentials"`), `clientId` o `clientSecret`. |
+| 429 | `COMUN_LIMITE_PETICIONES` | Más de 10 solicitudes por minuto desde la misma IP. |
+
 ## Perfil (self-service)
 
 Endpoints para que la **cuenta autenticada** gestione su propio perfil. Todos

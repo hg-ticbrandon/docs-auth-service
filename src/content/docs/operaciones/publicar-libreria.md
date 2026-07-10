@@ -129,6 +129,7 @@ consumidores dentro de GCP es mínimo.
 
 | Versión | Fecha | Cambios |
 |---|---|---|
+| **0.3.0** | 2026-07-10 | Soporte **M2M / tokens de servicio**. Agrega al `AuthContext` y al `JwtPayload` `tokenUse` (`'user'` \| `'service'`) y `clientId`; `email`/`name`/`type` pasan a opcionales (ausentes en tokens de servicio, se normalizan a string vacío en el `AuthContext`). Nuevos decoradores opt-in `@ServiceOnly()` / `@UserOnly()`. Nuevo `ServiceTokenProvider` (+ `AuthGuardModule.forServiceClient(...)`) para obtener tokens de servicio con cache, renovación proactiva y single-flight. Cambio **aditivo y retrocompatible**: los tokens de usuario existentes siguen funcionando (sin `tokenUse` → se tratan como `'user'`). Ver [Comunicación backend-a-backend (M2M)](/integracion/m2m/). |
 | **0.2.0** | 2026-07-02 | Agrega al `AuthContext` y al `JwtPayload` los campos del **socio de negocio (BC01)**, presentes **solo si la cuenta tiene un socio vinculado**: `codigoSocio`, `codigoCuenta`, `socioExternoId`, `socioNombre`, `socioDocumento`. Cambio **aditivo** (campos opcionales): los consumidores en `0.1.0` **no se rompen**; para leer los campos nuevos hay que subir a `^0.2.0`. |
 | **0.1.0** | 2026-05-29 | Versión inicial: `JwtAuthGuard`, decoradores `@CurrentUser` / `@Public` / `@RequirePermission` / `@RequireScope`, `AuthGuardModule`, cache de JWKS y `BlacklistChecker`. |
 

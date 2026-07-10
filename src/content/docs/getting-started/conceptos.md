@@ -47,11 +47,13 @@ Token firmado que prueba quién es el usuario. Se compone de 3 partes (header, p
 
 | Campo | Presencia | Descripción |
 |---|---|---|
-| `sub` | siempre | ID de la cuenta (uuid). |
-| `email` | siempre | Correo de la cuenta. |
+| `sub` | siempre | ID de la cuenta (uuid). En tokens de servicio, el `clientId`. |
+| `tokenUse` | siempre* | `user` (usuario final) o `service` (M2M). *Ausente en tokens emitidos antes de existir M2M → se trata como `user`. |
+| `clientId` | solo en tokens de servicio | `clientId` del cliente de servicio que pidió el token. |
+| `email` | solo tokens de usuario | Correo de la cuenta. Ausente en tokens de servicio. |
 | `username` | siempre* | Nombre de usuario (login alterno). *Puede faltar en tokens emitidos antes de habilitar login por usuario. |
-| `type` | siempre | `TipoCuenta`: `interno` \| `cliente` \| `proveedor`. |
-| `name` | siempre | Nombre completo. |
+| `type` | solo tokens de usuario | `TipoCuenta`: `interno` \| `cliente` \| `proveedor`. Ausente en tokens de servicio. |
+| `name` | solo tokens de usuario | Nombre completo. Ausente en tokens de servicio. |
 | `jti` | siempre | ID de la sesión (para blacklist/revocación). |
 | `roles` | siempre | Array de `{ role, scope, permisos[] }` con los permisos embebidos. |
 | `codigoSocio` | solo si la cuenta tiene códigos | Código interno de la cuenta, 1-20 alfanuméricos. Para generación de códigos en PDFs. **Independiente del socio.** |
@@ -64,6 +66,8 @@ Token firmado que prueba quién es el usuario. Se compone de 3 partes (header, p
 > **Códigos vs. socio son independientes.** `codigoSocio` y `codigoCuenta` son atributos de la **cuenta** (los edita el propio usuario desde su perfil) y aparecen si la cuenta los tiene seteados — **sin importar si hay un socio vinculado**. Son "todo o nada" (ambos o ninguno) y alfanuméricos de 1 a 20 caracteres.
 >
 > Los campos `socioExternoId`, `socioNombre` y `socioDocumento` aparecen **solo cuando la cuenta está vinculada a un socio de negocio (BC01)** (vínculo que gestiona un admin). El nombre/documento provienen de un **snapshot** capturado al vincular (puede quedar desactualizado si BC01 cambia; se refresca al re-vincular). BC01 sigue siendo la fuente de verdad para el maestro completo.
+
+> **Tokens de servicio (M2M).** Además de los tokens de usuario, el Auth Service emite **tokens de servicio** (grant client credentials) para comunicación backend-a-backend. Se distinguen por `tokenUse: "service"` y traen `clientId` en vez de los datos de usuario (`email`/`name`/`type` no aparecen). Llevan `roles[]` con permisos embebidos igual que un token de usuario, así los guards los autorizan sin round-trip. Ver [Comunicación backend-a-backend (M2M)](/integracion/m2m/).
 
 ## JWKS (JSON Web Key Set)
 
