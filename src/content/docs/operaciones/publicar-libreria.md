@@ -42,6 +42,21 @@ registry **rechaza** republicar una versión que ya existe.
 //us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:always-auth=true
 ```
 
+:::note[Acá SÍ va el `_authToken` en el `.npmrc` del proyecto — no lo "corrijas"]
+Puede chocar con lo que dice
+[Instalación](/integracion/instalacion/#11-configurar-el-registry-en-tu-proyecto), donde
+el token va **obligatoriamente** al `~/.npmrc` de usuario. La diferencia es la
+herramienta:
+
+- **Publicar** usa **`npm publish`** (ver el gotcha de abajo). **npm sí expande**
+  `${GOOGLE_NPM_TOKEN}` desde el `.npmrc` del proyecto → este flujo funciona.
+- **Instalar** en los backends consumidores usa **`pnpm`**, y **pnpm 11.11+ ignora**
+  credenciales del `.npmrc` del proyecto → allí el token debe ir al de usuario.
+
+Por eso este archivo se queda como está. Si algún día el publish pasa a pnpm, hay que
+mover el token al `~/.npmrc`.
+:::
+
 ### 3. Publicar
 
 El `prepublishOnly` del `package.json` corre `pnpm build` automáticamente antes

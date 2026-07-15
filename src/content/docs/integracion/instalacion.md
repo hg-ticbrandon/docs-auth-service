@@ -9,17 +9,42 @@ npm público.
 
 ### 1.1 Configurar el registry en tu proyecto
 
-Creá un `.npmrc` **en la raíz de tu backend** (no en `~`, así queda versionado y
-todo el equipo lo comparte):
+Van **dos archivos distintos**: el mapeo del registry se versiona con el repo, y el
+token vive **solo en tu máquina**.
+
+**a) `.npmrc` en la raíz de tu backend** (versionado, lo comparte el equipo) — enruta
+el scope `@hagemsa`, **sin token**:
 
 ```ini
 @hagemsa:registry=https://us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/
-//us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken=${GOOGLE_NPM_TOKEN}
 //us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:always-auth=true
 ```
 
-El token **no** se hardcodea: se inyecta vía la variable de entorno
-`GOOGLE_NPM_TOKEN`, que pnpm expande al instalar. Esto evita commitear secretos.
+**b) El token, en tu `~/.npmrc` de usuario.** No lo edites a mano: `pnpm config set`
+escribe ahí:
+
+```bash
+pnpm config set "//us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken" "$(gcloud auth print-access-token)"
+```
+
+:::danger[El token NO va en el `.npmrc` del proyecto]
+Desde **pnpm 11.11**, una credencial con `${VARIABLE}` en el `.npmrc` **del proyecto**
+se **ignora a propósito** — ese archivo se commitea y podría filtrar el secreto a un
+registry hostil. pnpm avisa y sigue:
+
+```text
+[WARN] Ignored project-level auth setting "//us-central1-npm.pkg.dev/.../:_authToken"
+in ".../.npmrc": environment variables are not expanded in registry credentials that
+come from a project .npmrc... put the line in your user-level ~/.npmrc, or set it with
+pnpm config set
+```
+
+Y el install muere con `ERR_PNPM_FETCH_403` **aunque el token sea válido y esté
+presente**. Si te pasa: no busques un token faltante — movelo al `~/.npmrc`.
+
+(Con pnpm anterior a 11.11 el token en el `.npmrc` del proyecto todavía funciona, pero
+rompe en cuanto pnpm suba de versión.)
+:::
 
 ### 1.2 De dónde sale `GOOGLE_NPM_TOKEN`
 
@@ -64,48 +89,41 @@ gcloud auth print-access-token
 
 ### 1.3 Autenticarte e instalar
 
-En cada `install`, generá el token y exportalo a `GOOGLE_NPM_TOKEN` justo antes:
-
-```powershell
-# Windows / PowerShell
-$env:GOOGLE_NPM_TOKEN = (gcloud auth print-access-token)
-pnpm add @hagemsa/auth-guard
-```
+Guardá el token en tu `~/.npmrc` de usuario con `pnpm config set`, y después instalá:
 
 ```bash
-# Linux / macOS
-export GOOGLE_NPM_TOKEN="$(gcloud auth print-access-token)"
+pnpm config set "//us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken" "$(gcloud auth print-access-token)"
 pnpm add @hagemsa/auth-guard
 ```
 
-**Cómo funciona esa línea (no hay magia):** es un solo comando que hace dos cosas:
+En **PowerShell** es igual (la sustitución `$(...)` también funciona):
 
-1. `gcloud auth print-access-token` se ejecuta primero y **genera e imprime** un
-   token OAuth nuevo.
-2. `$env:GOOGLE_NPM_TOKEN = (...)` (PowerShell) / `export GOOGLE_NPM_TOKEN="$(...)"`
-   (bash) **captura** esa salida y la guarda en la variable de entorno
-   `GOOGLE_NPM_TOKEN`.
+```powershell
+pnpm config set "//us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken" "$(gcloud auth print-access-token)"
+pnpm add @hagemsa/auth-guard
+```
 
-Luego, cuando corrés `pnpm`, este lee tu `.npmrc`, encuentra `${GOOGLE_NPM_TOKEN}`
-y lo reemplaza por el valor de esa variable para autenticarse contra el registry.
+**Qué hace esa línea:** `gcloud auth print-access-token` genera un token OAuth nuevo, y
+`pnpm config set` lo **escribe en tu `~/.npmrc`** (el de usuario, fuera del repo). A
+diferencia de una variable de entorno, **persiste entre terminales**: no hay que
+repetirlo en cada sesión, solo cuando el token caduca.
 
-Puntos importantes:
+> **El token dura ~1 hora.** Cuando un `install` falle con `401`/`403`, volvé a correr
+> el `pnpm config set` (regenera y reescribe). No hace falta `gcloud auth login` de
+> nuevo salvo que la sesión de gcloud haya expirado.
 
-- La variable vive **solo en esa terminal** (sesión actual). **No** se guarda en
-  el sistema ni en ningún archivo. Si cerrás la terminal o abrís otra, la variable
-  desaparece y tenés que volver a ejecutar la línea.
-- No necesitás crear la variable "a mano" ni guardarla en ningún lado: la línea la
-  crea (o sobrescribe) en el momento.
-- Si querés ver el valor: en PowerShell `echo $env:GOOGLE_NPM_TOKEN`, en bash
-  `echo $GOOGLE_NPM_TOKEN` (debería empezar con `ya29.`).
+:::tip[Para no repetirlo cada hora]
+`npx google-artifactregistry-auth` refresca la credencial automáticamente leyendo tu
+sesión de gcloud. Útil si trabajás todos los días contra el registry.
+:::
 
-Para instalaciones posteriores (cuando la lib ya está en tu `package.json`) es el
-mismo patrón en una terminal nueva: ejecutás la línea que setea el token y después
-`pnpm install`.
-
-> El token dura ~1 hora. Si un `install` falla con `401 Unauthorized`,
-> regeneralo (`gcloud auth print-access-token`) y reintentá. No hace falta
-> volver a hacer `gcloud auth login` salvo que la sesión de gcloud haya expirado.
+:::caution[¿Por qué no una variable de entorno `GOOGLE_NPM_TOKEN`?]
+Porque **ya no funciona para el `.npmrc` del proyecto**: pnpm 11.11+ no expande
+variables en credenciales que vienen de un `.npmrc` commiteado (ver 1.1). La variable
+`GOOGLE_NPM_TOKEN` **sigue siendo el mecanismo en el build de Docker**, pero allí se
+escribe en el `.npmrc` de **usuario** del contenedor (`/root/.npmrc`), no en el del
+repo. Ver [Desplegar a Cloud Run](/integracion/deploy-consumidor/#24-dockerfile).
+:::
 
 :::tip[El token es SOLO para instalar/actualizar — no para producción]
 Que el token dure 1 hora **no afecta a tu backend en producción**. El
@@ -131,11 +149,20 @@ función en el `pnpm install` del build.
 
 ### 1.4 En CI / Cloud Run
 
-- **Cloud Build / CI:** exportá `GOOGLE_NPM_TOKEN=$(gcloud auth print-access-token)`
-  antes del `pnpm install`. Ahí no hay `gcloud auth login` interactivo: el build
-  corre con su **service account**, que ya está autenticada — solo necesita el rol
+- **Cloud Build / CI:** pasá el token como `--build-arg GOOGLE_NPM_TOKEN` y, dentro del
+  Dockerfile, **escribilo en el `.npmrc` de usuario** antes del `pnpm install` (no en
+  el del proyecto — pnpm lo ignoraría, ver 1.1):
+
+  ```dockerfile
+  ARG GOOGLE_NPM_TOKEN
+  RUN printf '//us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken=%s\n' "$GOOGLE_NPM_TOKEN" > /root/.npmrc
+  ```
+
+  Ahí no hay `gcloud auth login` interactivo: el build corre con su **service
+  account**, que ya está autenticada — solo necesita el rol
   `roles/artifactregistry.reader`. El mismo `gcloud auth print-access-token` toma
-  la identidad de esa service account.
+  la identidad de esa service account. Guía completa:
+  [Desplegar a Cloud Run](/integracion/deploy-consumidor/).
 - **Runtime (Cloud Run):** la lib ya viene empaquetada en tu imagen Docker desde
   el build, así que el contenedor en ejecución **no** necesita el token ni acceso
   al registry. El flujo completo en prod es: Cloud Build usa el token (de su
