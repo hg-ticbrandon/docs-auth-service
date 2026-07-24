@@ -91,13 +91,54 @@ AuthGuardModule.forRoot({
 }),
 ```
 
+:::danger[`forServiceClient` NO configura el guard — revisá que esté en `forRoot`]
+`forServiceClient` también recibe un `authServiceUrl`, pero es para **otra cosa**:
+que tu backend **emita** tokens de servicio y llame a otros backends (M2M). El
+guard **no lo lee**. Si tenés los dos módulos registrados, es fácil mirar el
+archivo, ver un `authServiceUrl` y darlo por configurado cuando en realidad le
+falta al `forRoot`.
+
+```typescript
+// ✗ MAL: el guard se queda sin authServiceUrl
+AuthGuardModule.forRoot({
+  jwksUrl, issuer, audience,          // ← le falta authServiceUrl/internalSecret
+}),
+AuthGuardModule.forServiceClient({
+  authServiceUrl: process.env.AUTH_SERVICE_URL!,   // ← este NO cuenta para el guard
+  clientId, clientSecret,
+}),
+
+// ✓ BIEN: cada módulo con su propia config
+AuthGuardModule.forRoot({
+  jwksUrl, issuer, audience,
+  authServiceUrl: process.env.AUTH_SERVICE_URL!,
+  internalSecret: process.env.AUTH_INTERNAL_SECRET,
+}),
+AuthGuardModule.forServiceClient({
+  authServiceUrl: process.env.AUTH_SERVICE_URL!,
+  clientId, clientSecret,
+}),
+```
+
+Con tokens gordos el error queda **latente**: el guard nunca necesita el catálogo
+y todo parece andar. Aparece recién cuando llega el primer token flaco.
+:::
+
 :::caution[Ordená el despliegue antes del flip]
 El Auth Service pasa a emitir tokens flacos cuando se setea `JWT_EMBED_PERMISOS=false`.
 **Antes** de ese flip, TODOS los backends deben estar en `≥ 0.4.0` con `authServiceUrl`
-+ `internalSecret` configurados. Si un backend flaco recibe un token flaco sin poder
-alcanzar el catálogo, no puede resolver permisos y **falla cerrado** (403). Como el
-guard nuevo acepta ambos formatos, se puede actualizar la lib con tranquilidad y
-hacer el flip como último paso coordinado.
++ `internalSecret` configurados. Como el guard nuevo acepta ambos formatos, se puede
+actualizar la lib con tranquilidad y hacer el flip como último paso coordinado.
+
+Qué pasa si llega un token flaco y algo falta:
+
+| Situación | Respuesta |
+|---|---|
+| Backend en una versión **anterior** a 0.4.0 | **403** — lee `permisos` vacío y no concede nada |
+| Falta `authServiceUrl` en el `forRoot` | **500** — `authServiceUrl no configurada: no se puede resolver el catálogo de permisos` |
+| `internalSecret` ausente o distinto | **500** — el catálogo responde 401 y, sin caché previa, el guard falla cerrado |
+| Auth Service caído, **con** catálogo ya cacheado | **funciona** — sirve el catálogo stale mientras se recupera |
+| Todo OK pero el rol no tiene el permiso | **403** — el caso normal de autorización |
 :::
 
 ## Opciones de configuración
