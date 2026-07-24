@@ -41,7 +41,9 @@ Token firmado que prueba quién es el usuario. Se compone de 3 partes (header, p
 }
 ```
 
-> Cada item de `roles[]` embebe los **permisos efectivos del rol al emitir el JWT**. Los backends consumidores autorizan sin round-trip al Auth Service. Trade-off: cambios al catálogo de permisos no se reflejan hasta que el access token expira y se refresca — con el TTL actual (1 hora, `JWT_ACCESS_TTL_SECONDS`) esa ventana es de máximo 1 hora.
+> Cada item de `roles[]` embebe los **permisos efectivos del rol al emitir el JWT** (token "gordo", default). Los backends consumidores autorizan sin round-trip al Auth Service. Trade-off: cambios al catálogo de permisos no se reflejan hasta que el access token expira y se refresca — con el TTL actual (1 hora, `JWT_ACCESS_TTL_SECONDS`) esa ventana es de máximo 1 hora.
+>
+> Desde `@hagemsa/auth-guard` **0.4.0**, el Auth Service puede emitir tokens "flacos" (solo `{ role, scope }`, sin `permisos`) activando `JWT_EMBED_PERMISOS=false`; ahí cada backend resuelve `rol → permisos` desde un catálogo cacheado. Sirve para que el JWT no crezca con la cantidad de permisos. Ver [Permisos y scopes](/integracion/permisos-scopes/#cómo-evalúa-la-lib).
 
 ### Campos del payload
 

@@ -216,6 +216,24 @@ por tipo de token, subí a `@hagemsa/auth-guard@^0.3.1` y seguí
 [Comunicación backend-a-backend (M2M)](/integracion/m2m/).
 :::
 
+:::note[Versión 0.4.0 — tokens "flacos" (resolución por catálogo)]
+Desde **0.4.0** la lib acepta JWT **sin permisos embebidos**: resuelve
+`rol → permisos` desde el catálogo del Auth Service (cacheado en memoria) cuando el
+token viaja "flaco". Esto evita que el JWT crezca con la cantidad de permisos.
+Cambios **aditivos y retrocompatibles**:
+
+- El guard acepta **ambos formatos** (gordo y flaco). Con tokens gordos —los
+  actuales— sigue autorizando sin round-trip; nada cambia hasta que el Auth Service
+  active `JWT_EMBED_PERMISOS=false`.
+- **No hay cambios de código**: los decoradores (`@RequirePermission`, `@RequireScope`,
+  `@CurrentUser`) y el shape de `AuthContext` no cambian.
+- Para resolver tokens flacos hace falta `authServiceUrl` (ya requerido si usás
+  `enableBlacklistCheck`) y, si el Auth Service exige el secreto, `internalSecret`.
+- **Orden de despliegue:** actualizá a `^0.4.0` en TODOS los backends **antes** de
+  que el Auth Service pase a emitir tokens flacos. Ver
+  [Configuración → Con tokens flacos](/integracion/configuracion/#con-tokens-flacos).
+:::
+
 ## 2. Variables de entorno
 
 Agregá a tu `.env`:
@@ -236,11 +254,12 @@ AUTH_SERVICE_URL=https://auth.hagemsa.com
 AUTH_INTERNAL_SECRET=<secreto-compartido>
 ```
 
-> Con las **tres primeras** alcanza para autorizar (los permisos y scopes vienen
-> embebidos en el JWT). `AUTH_SERVICE_URL` y `AUTH_INTERNAL_SECRET` solo hacen
-> falta si activás `enableBlacklistCheck`. Los nombres de las variables son tuyos
-> —vos las mapeás a la config de la lib en `app.module.ts`—; acá usamos estos por
-> consistencia con el resto de la doc.
+> Con las **tres primeras** alcanza para autorizar mientras el JWT sea "gordo"
+> (permisos embebidos). `AUTH_SERVICE_URL` y `AUTH_INTERNAL_SECRET` hacen falta si
+> activás `enableBlacklistCheck` **o** si vas a resolver tokens "flacos" por
+> catálogo (≥ 0.4.0, cuando el Auth Service emita con `JWT_EMBED_PERMISOS=false`).
+> Los nombres de las variables son tuyos —vos las mapeás a la config de la lib en
+> `app.module.ts`—; acá usamos estos por consistencia con el resto de la doc.
 
 En **producción** los secretos vienen de **Secret Manager** (GCP), no de un `.env` plano.
 

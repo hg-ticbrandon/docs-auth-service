@@ -32,12 +32,15 @@ Cuando un cliente hace una request a tu backend:
 4. Tu backend → Auth Service: ¿jti revocado?  (SOLO si enableBlacklistCheck; cacheado 30s, fail-closed)
 5. Tu backend verifica permisos + scope leyendo los claims del JWT
    (roles[].permisos / roles[].scope) — SIN fetch al Auth Service
+   (token "flaco" ≥ 0.4.0: resuelve permisos del catálogo cacheado)
 6. Tu backend procesa la request si todo OK, devuelve 401/403 si no
 ```
 
 La lib `@hagemsa/auth-guard` hace 1-6 por vos. Solo tenés que decirle qué permiso y scope requiere cada endpoint.
 
-> **Importante:** los permisos y scopes vienen **embebidos en el JWT** (`roles[].permisos`, `roles[].scope`), así que la lib NO hace round-trip al Auth Service para autorizar. El único fetch en runtime es el chequeo de blacklist del paso 4, y **solo** si activás `enableBlacklistCheck`. Sin esa opción, validar un request es 100% local (una operación criptográfica). Trade-off: un cambio de permisos en un rol recién se refleja cuando el access token expira y se refresca (~TTL del access, hoy 1 hora).
+> **Importante:** por default los permisos y scopes vienen **embebidos en el JWT** (`roles[].permisos`, `roles[].scope`), así que la lib NO hace round-trip al Auth Service para autorizar. El único fetch en runtime es el chequeo de blacklist del paso 4, y **solo** si activás `enableBlacklistCheck`. Sin esa opción, validar un request es 100% local (una operación criptográfica). Trade-off: un cambio de permisos en un rol recién se refleja cuando el access token expira y se refresca (~TTL del access, hoy 1 hora).
+>
+> Desde **0.4.0**, si el Auth Service emite tokens "flacos" (`JWT_EMBED_PERMISOS=false`), la lib resuelve `rol → permisos` desde el catálogo del Auth Service **cacheado en memoria** (`permissionCacheTtlSeconds`, default 300s). Ahí sí hay un fetch, pero amortizado por el TTL del catálogo y compartido entre todas las requests (single-flight).
 
 ## Caché y latencia
 
@@ -45,15 +48,16 @@ La lib `@hagemsa/auth-guard` hace 1-6 por vos. Solo tenés que decirle qué perm
 |---|---|---|
 | JWKS (claves públicas) | 24 horas | sí (`jwksCacheTtlSeconds`) |
 | Revocación por JTI | 30 segundos | sí (`blacklistCacheTtlSeconds`) — solo si `enableBlacklistCheck` |
+| Catálogo `rol → permisos` | 5 minutos | sí (`permissionCacheTtlSeconds`) — solo con tokens "flacos" (≥ 0.4.0) |
 
-> Los **permisos NO se cachean** porque NO se consultan: vienen embebidos en el JWT. La opción `permissionCacheTtlSeconds` quedó como legacy del modelo anterior y hoy no tiene efecto.
+> Con tokens "gordos" (default) los **permisos NO se consultan**: vienen embebidos en el JWT, así que `permissionCacheTtlSeconds` no tiene efecto. Solo entra en juego con tokens "flacos" (`JWT_EMBED_PERMISOS=false`), donde la lib cachea el catálogo `rol → permisos` durante ese TTL.
 
 En condiciones normales (cache caliente), validar un JWT cuesta **una operación criptográfica local**. Si activás blacklist, se suma un fetch al Auth Service por jti cada 30s. Latencia esperada: < 5ms.
 
 ## Modelo de fallo
 
 - **Auth Service caído + cache fría:** todos los requests devuelven 401. El sistema falla cerrado (preferimos rechazar accesos válidos que dejar pasar sesiones comprometidas).
-- **Auth Service caído + cache caliente:** el cache de JWKS sigue sirviendo hasta su TTL y los permisos/scopes se leen del JWT (no dependen del Auth Service). Si `enableBlacklistCheck` está activo y la blacklist no responde → fail-closed → 401 para JWTs no cacheados como válidos. Sin blacklist, la validación sigue funcionando 100% local.
+- **Auth Service caído + cache caliente:** el cache de JWKS sigue sirviendo hasta su TTL y, con tokens "gordos", los permisos/scopes se leen del JWT (no dependen del Auth Service). Con tokens "flacos" (≥ 0.4.0), la lib sirve el catálogo `rol → permisos` cacheado (stale-while-revalidate) mientras el Auth Service se recupera; solo falla cerrado si nunca pudo cargarlo. Si `enableBlacklistCheck` está activo y la blacklist no responde → fail-closed → 401 para JWTs no cacheados como válidos. Sin blacklist y con tokens gordos, la validación sigue funcionando 100% local.
 - **JWKS rota claves:** el cache detecta cache miss para el nuevo kid y refresca automáticamente.
 
 ## Vínculos útiles

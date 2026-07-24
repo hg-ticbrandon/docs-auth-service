@@ -113,10 +113,15 @@ gcloud secrets versions access latest \
 ```
 
 > **Compartir este secreto** con cada backend que vaya a usar `@hagemsa/auth-guard`
-> con `enableBlacklistCheck: true`. En sus deploys va como env `AUTH_INTERNAL_SECRET`
-> (idealmente también desde Secret Manager, no en texto plano). Los devs que solo
-> integran un backend normalmente **lo piden al equipo de plataforma** en vez de
-> tener acceso directo al secreto.
+> con `enableBlacklistCheck: true` **o** que resuelva permisos por catálogo (tokens
+> "flacos", ≥ 0.4.0, cuando el Auth Service emita con `JWT_EMBED_PERMISOS=false`).
+> Ambos usos pegan a `/api/internal/*` con este header. En sus deploys va como env
+> `AUTH_INTERNAL_SECRET` (idealmente también desde Secret Manager, no en texto
+> plano). Los devs que solo integran un backend normalmente **lo piden al equipo de
+> plataforma** en vez de tener acceso directo al secreto.
+>
+> El **frontend** (`FR_HagemsaERP`) también lo necesita —como `INTERNAL_SHARED_SECRET`—
+> para resolver permisos de tokens flacos del lado servidor. Mismo valor, byte-exacto.
 
 ## 5. SendGrid (opcional)
 

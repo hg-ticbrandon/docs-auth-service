@@ -59,6 +59,47 @@ AuthGuardModule.forRoot({
 }),
 ```
 
+## Con tokens flacos
+
+Por default el Auth Service emite tokens **"gordos"**: cada `roles[]` trae sus
+`permisos` embebidos y la lib autoriza sin ningún round-trip. El problema es que
+un usuario con muchos roles genera un JWT de varios KB, que a la larga no entra en
+una cookie ni en el header `Authorization`.
+
+Desde **0.4.0** la lib también acepta tokens **"flacos"**: el JWT lleva solo
+`{ role, scope }` y la lib resuelve `rol → permisos` desde el catálogo del Auth
+Service (`GET /api/internal/roles-permisos`), cacheado en memoria. El guard acepta
+**ambos formatos** de forma transparente, así que podés actualizar la lib sin
+coordinar y hacer el cambio de formato después.
+
+Para que la resolución funcione cuando llegue un token flaco, el config necesita
+`authServiceUrl` y (si el Auth Service lo exige) `internalSecret` — los **mismos**
+campos que la blacklist:
+
+```typescript
+AuthGuardModule.forRoot({
+  jwksUrl: process.env.AUTH_JWKS_URL!,
+  issuer: process.env.AUTH_JWT_ISSUER!,
+  audience: process.env.AUTH_JWT_AUDIENCE!,
+
+  // Necesarios para resolver permisos de un token flaco:
+  authServiceUrl: process.env.AUTH_SERVICE_URL!,
+  internalSecret: process.env.AUTH_INTERNAL_SECRET,
+
+  // Opcional: cuánto cachear el catálogo rol→permisos (default 300s).
+  permissionCacheTtlSeconds: 300,
+}),
+```
+
+:::caution[Ordená el despliegue antes del flip]
+El Auth Service pasa a emitir tokens flacos cuando se setea `JWT_EMBED_PERMISOS=false`.
+**Antes** de ese flip, TODOS los backends deben estar en `≥ 0.4.0` con `authServiceUrl`
++ `internalSecret` configurados. Si un backend flaco recibe un token flaco sin poder
+alcanzar el catálogo, no puede resolver permisos y **falla cerrado** (403). Como el
+guard nuevo acepta ambos formatos, se puede actualizar la lib con tranquilidad y
+hacer el flip como último paso coordinado.
+:::
+
 ## Opciones de configuración
 
 | Opción | Tipo | Default | Descripción |
@@ -66,12 +107,12 @@ AuthGuardModule.forRoot({
 | `jwksUrl` | string | (requerido) | URL del JWKS público |
 | `issuer` | string | (requerido) | Issuer esperado en el JWT (`iss`) |
 | `audience` | string | (requerido) | Audience esperada en el JWT (`aud`) |
-| `authServiceUrl` | string | (opcional) | URL base para `/api/internal/*`. **Solo se usa con `enableBlacklistCheck`.** NO es necesario para `@RequirePermission` ni `@RequireScope` (los permisos vienen en el JWT). |
+| `authServiceUrl` | string | (opcional) | URL base para `/api/internal/*`. Se usa con `enableBlacklistCheck` **y** para resolver el catálogo `rol → permisos` cuando llega un token "flaco" (≥ 0.4.0). Con tokens "gordos" (permisos embebidos) no hace falta. |
 | `enableBlacklistCheck` | boolean | `false` | Si `true`, consulta blacklist en cada request (con cache 30s). Requiere `authServiceUrl`. |
 | `jwksCacheTtlSeconds` | number | `86400` (24h) | TTL del cache de claves públicas |
-| `permissionCacheTtlSeconds` | number | `300` (5min) | **Legacy / sin efecto.** Quedó del modelo anterior; hoy los permisos vienen embebidos en el JWT y no se cachean. |
+| `permissionCacheTtlSeconds` | number | `300` (5min) | TTL del catálogo `rol → permisos` que la lib cachea para resolver tokens "flacos" (≥ 0.4.0). Con tokens "gordos" no tiene efecto (los permisos ya vienen en el JWT). |
 | `blacklistCacheTtlSeconds` | number | `30` | TTL del cache de revocación por jti |
-| `internalSecret` | string | (opcional) | Secret que se manda como header `X-Internal-Secret` al consultar `/api/internal/*`. Obligatorio **si** activás `enableBlacklistCheck`. |
+| `internalSecret` | string | (opcional) | Secret que se manda como header `X-Internal-Secret` al consultar `/api/internal/*`. Obligatorio **si** activás `enableBlacklistCheck` o si el Auth Service exige el secreto para el catálogo de permisos. |
 
 ## Configuración recomendada por entorno
 

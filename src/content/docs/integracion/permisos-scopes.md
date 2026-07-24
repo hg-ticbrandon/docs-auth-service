@@ -68,12 +68,27 @@ Si una cuenta tiene **múltiples asignaciones del mismo rol** con scopes distint
 
 Cuando un endpoint requiere `wms:inventario:write` con scope `almacenId`:
 
-1. La lib lee `roles[]` del JWT. Cada item trae `{ role, scope, permisos }`.
+1. La lib lee `roles[]` del JWT. Cada item trae `{ role, scope, permisos }` (en un
+   token "flaco", `permisos` llega vacío y la lib lo **hidrata** desde el catálogo
+   cacheado antes de evaluar — ver nota abajo).
 2. Encuentra los roles cuyo `permisos[]` incluye el permiso requerido.
 3. De esos, busca uno con scope compatible (vacío = global, o con el `almacenId` del path).
 4. Si encuentra → pasa. Si no → 403.
 
-> El JWT trae los permisos del rol embebidos al momento de su emisión, así que la lib autoriza **sin ningún round-trip** al Auth Service. **Trade-off:** cambios al catálogo de permisos no se reflejan hasta que el access token expira y se refresca (~TTL del access). Si necesitás ver los permisos actuales de un rol (admin/auditoría), consultá `GET /api/admin/roles/:id`, que los devuelve en `datos.permisos`.
+> **Token "gordo" (default):** el JWT trae los permisos del rol embebidos al momento
+> de su emisión, así que la lib autoriza **sin ningún round-trip** al Auth Service.
+> **Trade-off:** cambios al catálogo de permisos no se reflejan hasta que el access
+> token expira y se refresca (~TTL del access).
+>
+> **Token "flaco" (≥ 0.4.0, con `JWT_EMBED_PERMISOS=false`):** el JWT lleva solo
+> `{ role, scope }` y la lib resuelve `rol → permisos` desde el catálogo del Auth
+> Service (`GET /api/internal/roles-permisos`), cacheado en memoria
+> (`permissionCacheTtlSeconds`, default 300s). Acá los cambios de permisos se
+> reflejan al vencer ese TTL, sin esperar a que el token se refresque.
+>
+> En cualquier caso, si necesitás ver los permisos actuales de un rol
+> (admin/auditoría), consultá `GET /api/admin/roles/:id`, que los devuelve en
+> `datos.permisos`.
 
 ## Patrones comunes
 
@@ -112,8 +127,10 @@ Supongamos este endpoint protegido por permiso **y** scope de almacén:
 verInventario(@Param('almacenId') almacenId: string) { /* ... */ }
 ```
 
-El guard mira **lo que viene embebido en el JWT** (no consulta nada). Veamos el
-mismo endpoint contra distintos tokens.
+El guard evalúa contra los permisos del rol: embebidos en el JWT (token "gordo",
+default) o hidratados del catálogo cacheado (token "flaco", ≥ 0.4.0). Los ejemplos
+de abajo muestran el payload de tokens gordos; con tokens flacos la evaluación es
+idéntica una vez resueltos los `permisos`.
 
 ### Caso A — scope acotado a un almacén
 

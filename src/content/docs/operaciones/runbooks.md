@@ -105,6 +105,53 @@ Más complicado porque requiere coordinación con todos los backends que lo cons
 
 > **Durante la ventana de transición:** los backends que aún tienen el secret viejo van a recibir 401 al consultar `/api/internal/*`, lo que los hace fail-closed y rechazar JWTs. Idealmente, esta ventana es muy corta (< 1 minuto).
 
+## Runbook: pasar a tokens "flacos" (`JWT_EMBED_PERMISOS=false`)
+
+**Objetivo:** dejar de embeber los permisos en el JWT para que no crezca con la
+cantidad de roles/permisos. A partir del flip, cada consumidor resuelve
+`rol → permisos` desde el catálogo del Auth Service (`GET /api/internal/roles-permisos`),
+cacheado. Requiere `@hagemsa/auth-guard` **≥ 0.4.0** en todos los backends.
+
+:::danger[El orden importa: actualizá TODO antes del flip]
+El guard de 0.4.0 acepta ambos formatos (gordo y flaco), pero un backend en una
+versión vieja **no sabe** resolver un token flaco: leería `permisos` vacío y
+**denegaría todo (403)**. Por eso el flip del Auth Service es el **último** paso.
+:::
+
+**Pasos:**
+
+1. **Publicar `@hagemsa/auth-guard@0.4.0`** al Artifact Registry (ver
+   [Publicar la librería](/operaciones/publicar-libreria/)).
+2. **Actualizar TODOS los consumidores** a `^0.4.0` y, en su `AuthGuardModule.forRoot`,
+   asegurar `authServiceUrl` + `internalSecret`. Incluye el frontend
+   (`FR_HagemsaERP`), que resuelve permisos del lado servidor con
+   `INTERNAL_SHARED_SECRET`. Redeployar cada uno.
+3. **Verificar** que cada backend sigue autorizando con los tokens gordos actuales
+   (el guard nuevo los soporta) — no debería cambiar nada aún.
+4. **Verificar el endpoint del catálogo** desde la red donde corren los consumidores:
+   ```bash
+   curl -H "X-Internal-Secret: <secret>" \
+     https://auth.hagemsa.com/api/internal/roles-permisos
+   # 200 con { version, roles: { ... } }
+   ```
+5. **Flip:** setear `JWT_EMBED_PERMISOS=false` en el Auth Service y redeployar:
+   ```bash
+   gcloud run services update auth-service --region=us-central1 \
+     --update-env-vars=JWT_EMBED_PERMISOS=false
+   ```
+6. **Validar en caliente:** un login nuevo debe emitir un JWT **notablemente más
+   chico** (solo `{ role, scope }` en `roles[]`), y los endpoints protegidos deben
+   seguir respondiendo 200/403 igual que antes. Revisar logs de los consumidores por
+   errores de resolución del catálogo.
+
+**Rollback:** volver a `JWT_EMBED_PERMISOS=true` (o quitar la env) y redeployar el
+Auth Service. Los tokens vuelven a viajar gordos al instante; no hace falta tocar los
+consumidores (el guard sigue aceptando ambos formatos). Los JWT flacos ya emitidos
+se resuelven por catálogo hasta que expiran.
+
+> **Nota:** los access token flacos ya emitidos y los gordos conviven sin problema
+> durante la transición — cada uno se autoriza según su propio formato.
+
 ## Runbook: backup y restore de la DB
 
 **Backup manual:**

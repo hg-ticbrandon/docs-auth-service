@@ -129,8 +129,9 @@ al Auth Service** para autorizar:
 
 1. Verifica la **firma RS256** con la clave pública del **JWKS** (cacheada 24h).
 2. Verifica **`iss`** (`https://auth.hagemsa.com`) y **`aud`** (`hagemsa-backends`).
-3. Resuelve **permisos y scopes** desde los claims embebidos en el JWT
-   (`roles[].permisos` / `roles[].scope`).
+3. Resuelve **permisos y scopes**: desde los claims embebidos en el JWT
+   (`roles[].permisos` / `roles[].scope`) con tokens "gordos" —el default—, o desde
+   el catálogo cacheado del Auth Service con tokens "flacos" (≥ 0.4.0).
 4. Responde `200`, o `401` (token inválido/expirado) / `403` (sin permiso o scope).
 
 Ver [Proteger endpoints](/integracion/proteger-endpoints/) y
