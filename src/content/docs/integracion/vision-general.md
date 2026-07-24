@@ -11,7 +11,7 @@ Esta sección es para devs que están construyendo o manteniendo un backend dent
 - Acceso de lectura al Artifact Registry interno de HAGEMSA (para instalar `@hagemsa/auth-guard`). [Ver instalación →](/integracion/instalacion/)
 - Variables de entorno para apuntar al Auth Service:
   - **Mínimo (validar JWT + permisos + scopes):** `AUTH_JWKS_URL`, `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`.
-  - **Solo si activás blacklist (logout instantáneo):** sumá `AUTH_SERVICE_URL` y `AUTH_INTERNAL_SECRET`.
+  - **Para blacklist (logout instantáneo) o tokens "flacos" (≥ 0.4.0, `JWT_EMBED_PERMISOS=false`):** sumá `AUTH_SERVICE_URL` y `AUTH_INTERNAL_SECRET`. Con tokens "gordos" y sin blacklist no hacen falta.
 
 ## Lo que vas a hacer
 

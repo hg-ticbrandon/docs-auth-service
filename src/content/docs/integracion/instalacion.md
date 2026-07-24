@@ -246,7 +246,9 @@ AUTH_JWKS_URL=https://auth.hagemsa.com/.well-known/jwks.json
 AUTH_JWT_ISSUER=https://auth.hagemsa.com
 AUTH_JWT_AUDIENCE=hagemsa-backends
 
-# --- Solo si activás blacklist (logout instantáneo) ---
+# --- Para blacklist (logout instantáneo) O para resolver tokens "flacos" por
+#     catálogo (≥ 0.4.0, cuando el Auth Service emite con JWT_EMBED_PERMISOS=false).
+#     Con tokens "gordos" y sin blacklist NO hacen falta. ---
 # URL base del Auth Service (para consultar /api/internal/*).
 AUTH_SERVICE_URL=https://auth.hagemsa.com
 # Shared secret para /api/internal/*. Pedilo al equipo de plataforma.
@@ -260,6 +262,24 @@ AUTH_INTERNAL_SECRET=<secreto-compartido>
 > catálogo (≥ 0.4.0, cuando el Auth Service emita con `JWT_EMBED_PERMISOS=false`).
 > Los nombres de las variables son tuyos —vos las mapeás a la config de la lib en
 > `app.module.ts`—; acá usamos estos por consistencia con el resto de la doc.
+
+:::note[Es UN solo secreto, con dos nombres]
+`INTERNAL_SHARED_SECRET` y `AUTH_INTERNAL_SECRET` **no son dos secretos**: son el
+**mismo valor** visto desde cada lado.
+
+- **`INTERNAL_SHARED_SECRET`** vive en el **Auth Service** y *valida* el header
+  `X-Internal-Secret` entrante. Es la fuente de verdad.
+- **`AUTH_INTERNAL_SECRET`** (el nombre es tuyo) vive en **tu backend** y es la
+  *copia que se envía* en ese header.
+
+Relación **1 emisor / N copias**: se genera una vez en el Auth Service y cada
+consumidor lleva una copia byte-exacta.
+
+**No creás un secreto nuevo para el catálogo.** El `INTERNAL_SHARED_SECRET` del
+Auth Service **ya existe** (lo usa la blacklist de `jti`); el endpoint de catálogo
+lo reusa. Si tu backend ya tenía `AUTH_INTERNAL_SECRET` configurado (p. ej. para
+blacklist), ya estás — no hay nada que crear ni cambiar.
+:::
 
 En **producción** los secretos vienen de **Secret Manager** (GCP), no de un `.env` plano.
 
