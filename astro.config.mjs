@@ -74,6 +74,12 @@ export default defineConfig({
           ],
         },
         {
+          label: 'Versiones',
+          items: [
+            { label: '@hagemsa/auth-guard', slug: 'versiones/auth-guard' },
+          ],
+        },
+        {
           label: 'Operaciones',
           items: [
             { label: 'Setup de GCP', slug: 'operaciones/setup-gcp' },
