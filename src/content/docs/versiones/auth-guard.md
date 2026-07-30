@@ -12,19 +12,25 @@ Service. Esta página existe para poder consultarlo sin abrir el repo.
 
 ## Resumen
 
-| Versión | Fecha | Qué trae | ¿Rompe algo? |
+La columna **Publicada** es la fecha real de subida al Artifact Registry, que es
+la que importa para saber desde cuándo se puede instalar. No siempre coincide con
+la del `CHANGELOG.md`: la 0.2.0, por ejemplo, está fechada ahí como 2026-07-09
+pero se publicó el 2026-07-02.
+
+| Versión | Publicada | Qué trae | ¿Rompe algo? |
 | --- | --- | --- | --- |
-| [0.5.0](#050) | 2026-07-27 | Endurecimiento: amplificación de JWKS, 500→401, cache acotado | No |
+| [0.5.0](#050) | 2026-07-30 | Endurecimiento: amplificación de JWKS, 500→401, cache acotado | No |
 | [0.4.0](#040) | 2026-07-24 | Tokens "flacos": resuelve `rol → permisos` del catálogo | No, pero ordena el despliegue |
 | [0.3.1](#031) | 2026-07-10 | Corrige tipos de `AuthContext` que rompieron en 0.3.0 | No, arregla |
 | [0.3.0](#030) | 2026-07-10 | M2M: `client_credentials`, `@ServiceOnly`, `ServiceTokenProvider` | Sí, tipos de `AuthContext` |
-| [0.2.0](#020) | 2026-07-09 | Vínculo con el socio de negocio de BC01 en el contexto | No |
+| [0.2.0](#020) | 2026-07-02 | Vínculo con el socio de negocio de BC01 en el contexto | No |
 | [0.1.0](#010) | 2026-05-29 | Primera versión: guard JWT, decoradores, JWKS, blacklist | — |
 
-:::caution[La 0.5.0 todavía no está publicada]
-El código está en la rama `feat/hardening-seguridad` del Auth Service y el
-`dist/` está al día, pero **no se publicó en Artifact Registry**. La última
-instalable es la 0.4.0.
+:::tip[La 0.5.0 es la versión `latest`]
+Está publicada y es la que instala un `pnpm add @hagemsa/auth-guard` sin versión.
+Los backends que ya tienen `^0.4.0` **no la reciben solos**: en SemVer `0.x` el
+caret no cruza minors, así que `^0.4.0` significa `>=0.4.0 <0.5.0`. Para pasar a
+la 0.5.0 hay que pedirla explícitamente.
 :::
 
 Para ver qué hay publicado realmente:
@@ -207,6 +213,20 @@ los decoradores `@Public()`, `@RequirePermission()`, `@RequireScope()` y
 `authServiceUrl` deja de ser necesaria para `@RequirePermission` y
 `@RequireScope`: los permisos y scopes viajan embebidos en el JWT y el guard los
 resuelve sin round-trip. Solo se usa cuando `enableBlacklistCheck` está activo.
+
+## Trampa conocida en todas las versiones
+
+**Falta `@nestjs/core` en `peerDependencies`.** El guard importa `Reflector` de
+`@nestjs/core` (`src/guards/jwt-auth.guard.ts`), pero el `package.json` solo
+declara `@nestjs/common`, `reflect-metadata` y `rxjs`.
+
+En la práctica no rompe nada: ningún backend NestJS funciona sin `@nestjs/core`,
+así que siempre está presente. Solo se nota al instalar la librería en un
+proyecto vacío, donde `require('@hagemsa/auth-guard')` falla con
+`Cannot find module '@nestjs/core'`.
+
+Está así desde la 0.1.0. Se corrige en la próxima versión que se publique; no
+amerita una release solo para esto.
 
 ## Cómo actualizar
 
