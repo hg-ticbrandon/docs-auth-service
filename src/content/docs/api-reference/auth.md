@@ -81,7 +81,7 @@ Content-Type: application/json
 | 401 | `AUTH_TOKEN_INVALIDO` | Refresh token inválido, expirado, o cuenta no activa. |
 | 401 | `AUTH_TOKEN_REUSADO` | Se detectó reuso de un token ya rotado. **Toda la familia queda revocada.** El usuario debe volver a loguearse. |
 
-> **Reuso detectado:** si mandás un refresh token ya usado, se revoca **toda la familia** de tokens derivados. El usuario tiene que volver a hacer login desde cero.
+> **Reuso detectado:** si mandas un refresh token ya usado, se revoca **toda la familia** de tokens derivados. El usuario tiene que volver a hacer login desde cero.
 
 ## POST /api/auth/logout
 

@@ -76,7 +76,7 @@ que en un proceso de vida larga el crecimiento era monótono. Queda acotado a
 | Cada token con `kid` desconocido disparaba un fetch al Auth Service | Como máximo un refresco por minuto |
 | La memoria del proceso crecía con cada `jti` distinto | Acotada |
 
-Si tenés alertas sobre tasa de 5xx, es esperable que bajen; si las tenés sobre
+Si tienes alertas sobre tasa de 5xx, es esperable que bajen; si las tienes sobre
 401, que suban un poco. Es el mismo evento reclasificado.
 
 ### La contrapartida
@@ -87,7 +87,7 @@ nueva se rechazan con 401.
 
 Se aceptó a conciencia: la rotación es un evento raro y planificado, mientras
 que la amplificación era explotable por cualquiera en cualquier momento. Para
-evitar la ventana por completo, publicá la clave nueva en el JWKS **antes** de
+evitar la ventana por completo, publica la clave nueva en el JWKS **antes** de
 empezar a firmar con ella.
 
 ### Lo que no es configurable
@@ -131,12 +131,12 @@ ahora como TTL del catálogo.
 No hay cambios de código requeridos: los decoradores y el shape de `AuthContext`
 no cambian, y el guard sigue funcionando igual con los tokens "gordos".
 
-Para resolver tokens flacos hace falta `authServiceUrl` —ya requerido si usás
+Para resolver tokens flacos hace falta `authServiceUrl` —ya requerido si usas
 `enableBlacklistCheck`— y, si el Auth Service exige `INTERNAL_SHARED_SECRET`, el
 `internalSecret`.
 
 :::danger[Orden de despliegue]
-Actualizá esta versión en **todos** los backends **antes** de que el Auth Service
+Actualiza esta versión en **todos** los backends **antes** de que el Auth Service
 pase a emitir tokens flacos (`JWT_EMBED_PERMISOS=false`). El guard nuevo acepta
 ambos formatos, así que se puede actualizar sin coordinar y hacer el flip
 después. Al revés, los backends en 0.3.x no sabrían resolver los permisos.
@@ -156,7 +156,7 @@ usuarios por defecto). El guard siempre lo puebla, así que al leerlo desde
 vienen en el JWT y el guard los normaliza a `''`.
 
 :::tip
-Si estás en 0.3.0, actualizá a esta. Es el mismo día y solo corrige tipos.
+Si estás en 0.3.0, actualiza a esta. Es el mismo día y solo corrige tipos.
 :::
 
 ## 0.3.0
@@ -235,4 +235,4 @@ pnpm add @hagemsa/auth-guard@<version>
 ```
 
 Ver [Instalación](/integracion/instalacion/) para la configuración del registry,
-y [Publicar auth-guard](/operaciones/publicar-libreria/) si sos quien publica.
+y [Publicar auth-guard](/operaciones/publicar-libreria/) si eres quien publica.

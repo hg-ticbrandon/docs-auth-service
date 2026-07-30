@@ -32,7 +32,7 @@ gcloud auth application-default login   # one-time
 
 **Opción B — Access token corto (si ADC falla por política del Workspace):**
 
-Si el `application-default login` falla porque tu Workspace bloquea la pantalla de consent (error "Missing required parameter: redirect_uri" o "scope not consented"), usá un access token corto del `gcloud auth login` que ya tenés activo:
+Si el `application-default login` falla porque tu Workspace bloquea la pantalla de consent (error "Missing required parameter: redirect_uri" o "scope not consented"), usa un access token corto del `gcloud auth login` que ya tienes activo:
 
 ```bash
 ./cloud-sql-proxy --port 5433 \
@@ -44,11 +44,11 @@ Si el `application-default login` falla porque tu Workspace bloquea la pantalla 
 Si la sesión dura más, el proxy empezará a tirar `Server has closed the connection`. Reiniciarlo con un token fresco.
 :::
 
-El proxy abre Postgres en `127.0.0.1:5433` (cambialo si tenés otro Postgres en `5432`).
+El proxy abre Postgres en `127.0.0.1:5433` (cambialo si tienes otro Postgres en `5432`).
 
 ## 3. DATABASE_URL para migrations
 
-En **otra terminal**, en el proyecto del Auth Service, exportá la URL apuntando al proxy con el usuario `auth_migrator`:
+En **otra terminal**, en el proyecto del Auth Service, exporta la URL apuntando al proxy con el usuario `auth_migrator`:
 
 ```bash
 export DATABASE_URL="postgresql://auth_migrator:<password-url-encoded>@127.0.0.1:5433/db_auth_service?schema=public"
@@ -67,13 +67,13 @@ NEW_PW="Pw1-${RAW}"
 ```
 :::
 
-> Si **no recordás la password** de `auth_migrator` o `auth_service`, regenerá la del que necesitás:
+> Si **no recuerdas la password** de `auth_migrator` o `auth_service`, regenera la del que necesitas:
 > ```bash
 > gcloud sql users set-password auth_service \
 >   --instance=hagemsa-postgresql \
 >   --password="<NUEVA-PASSWORD>"
 > ```
-> Y **actualizá el secret** `auth-db-url` con la URL nueva (ver [Secretos](/operaciones/secretos/)).
+> Y **actualiza el secret** `auth-db-url` con la URL nueva (ver [Secretos](/operaciones/secretos/)).
 
 ## 4. Aplicar migrations
 
@@ -129,7 +129,7 @@ SELECT
 ```
 
 :::note[Ownership del schema nuevo]
-El schema queda owned por `auth_migrator` (los 5 originales son de `postgres`). Funciona perfecto — los grants de arriba son suficientes. Si querés uniformar el ownership con el resto, corré como `postgres`:
+El schema queda owned por `auth_migrator` (los 5 originales son de `postgres`). Funciona perfecto — los grants de arriba son suficientes. Si quieres uniformar el ownership con el resto, corre como `postgres`:
 ```sql
 ALTER SCHEMA <schema> OWNER TO postgres;
 ```
@@ -137,7 +137,7 @@ Requiere la password de `postgres` (no la de `auth_migrator`), por eso es opcion
 :::
 
 :::caution[Orden vs. el deploy de Cloud Run]
-Hacé `migrate deploy` **y** estos grants **antes** de deployar la imagen que usa el schema nuevo. La migración es aditiva, así que la imagen vieja la ignora sin romperse; pero la imagen nueva sin los grants sí falla.
+Haz `migrate deploy` **y** estos grants **antes** de deployar la imagen que usa el schema nuevo. La migración es aditiva, así que la imagen vieja la ignora sin romperse; pero la imagen nueva sin los grants sí falla.
 :::
 
 > **Precedente aplicado:** el schema `socio_negocio` (feature de vínculo con BC01 / códigos de socio) se creó así el 2026-07-02.
@@ -146,7 +146,7 @@ Hacé `migrate deploy` **y** estos grants **antes** de deployar la imagen que us
 
 Para contrastar con 4.b: **agregar columnas (o índices) a tablas de un schema que ya existe NO requiere ningún paso extra.** Es el flujo estándar de la sección 4, sin grants adicionales.
 
-Por qué no hacen falta grants: los `GRANT ... ON ALL TABLES` de `auth_service` son a **nivel de tabla**, y una columna nueva **hereda** automáticamente los privilegios de su tabla (salvo que se hubieran usado grants por-columna, cosa que acá nunca hacemos). Es decir, `auth_service` puede leer/escribir la columna nueva apenas se crea.
+Por qué no hacen falta grants: los `GRANT ... ON ALL TABLES` de `auth_service` son a **nivel de tabla**, y una columna nueva **hereda** automáticamente los privilegios de su tabla (salvo que se hubieran usado grants por-columna, cosa que aquí nunca hacemos). Es decir, `auth_service` puede leer/escribir la columna nueva apenas se crea.
 
 ```bash
 # Con el proxy arriba y DATABASE_URL apuntando a auth_migrator:
@@ -182,11 +182,11 @@ Esto pobla:
 - `authorization.roles` con los ~11 roles del sistema (`SUPER_ADMIN`, `GERENTE`, `JEFE_ALMACEN`, `ALMACENERO`, `OPERADOR_FLOTA`, `CONTADOR`, `FACTURADOR`, `VENDEDOR`, `RRHH`, `CHOFER`, `CLIENTE`, `PROVEEDOR`).
 - `authorization.role_permissions` con las asignaciones por default.
 
-**Idempotente:** podés correrlo dos veces sin problema. Usa `upsert`.
+**Idempotente:** puedes correrlo dos veces sin problema. Usa `upsert`.
 
 ## 7. Bajar el proxy
 
-Volvé a la terminal con el proxy corriendo y `Ctrl+C`.
+Vuelve a la terminal con el proxy corriendo y `Ctrl+C`.
 
 ## ¿Cuándo aplicar migrations nuevas?
 

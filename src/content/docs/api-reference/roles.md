@@ -183,7 +183,7 @@ Quita un permiso del rol. También funciona en roles de sistema.
 
 ## Roles del sistema (seed inicial)
 
-Todos los roles del seed son `esSistema: true`. Su nombre y descripción son inmutables, pero podés ajustar sus permisos desde la UI o el endpoint correspondiente.
+Todos los roles del seed son `esSistema: true`. Su nombre y descripción son inmutables, pero puedes ajustar sus permisos desde la UI o el endpoint correspondiente.
 
 | Rol | Permisos principales |
 |---|---|

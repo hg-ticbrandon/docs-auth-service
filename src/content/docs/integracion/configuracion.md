@@ -5,7 +5,7 @@ description: Cómo cablear AuthGuardModule en tu app NestJS.
 
 ## Módulo raíz (configuración mínima)
 
-Esto es **todo lo que necesitás** para validar JWT + permisos + scopes. Los
+Esto es **todo lo que necesitas** para validar JWT + permisos + scopes. Los
 permisos y scopes vienen embebidos en el JWT, así que **no** hace falta
 `authServiceUrl` ni `internalSecret` para autorizar.
 
@@ -33,13 +33,13 @@ import { AuthGuardModule, JwtAuthGuard } from '@hagemsa/auth-guard';
 export class AppModule {}
 ```
 
-> Importante: cargá el `.env` **antes** de importar `AppModule` (ej.
+> Importante: carga el `.env` **antes** de importar `AppModule` (ej.
 > `import 'dotenv/config'` como primera línea de `main.ts`), porque
 > `AuthGuardModule.forRoot({...})` lee las env al construir el módulo.
 
 ## Con blacklist (logout instantáneo, opcional)
 
-Solo si querés que un `logout` invalide el JWT **antes** de su `exp`. Esto agrega
+Solo si quieres que un `logout` invalide el JWT **antes** de su `exp`. Esto agrega
 un fetch al Auth Service por request (cacheado 30s por jti) y requiere
 `authServiceUrl` + `internalSecret`:
 
@@ -69,7 +69,7 @@ una cookie ni en el header `Authorization`.
 Desde **0.4.0** la lib también acepta tokens **"flacos"**: el JWT lleva solo
 `{ role, scope }` y la lib resuelve `rol → permisos` desde el catálogo del Auth
 Service (`GET /api/internal/roles-permisos`), cacheado en memoria. El guard acepta
-**ambos formatos** de forma transparente, así que podés actualizar la lib sin
+**ambos formatos** de forma transparente, así que puedes actualizar la lib sin
 coordinar y hacer el cambio de formato después.
 
 Para que la resolución funcione cuando llegue un token flaco, el config necesita
@@ -91,10 +91,10 @@ AuthGuardModule.forRoot({
 }),
 ```
 
-:::danger[`forServiceClient` NO configura el guard — revisá que esté en `forRoot`]
+:::danger[`forServiceClient` NO configura el guard — revisa que esté en `forRoot`]
 `forServiceClient` también recibe un `authServiceUrl`, pero es para **otra cosa**:
 que tu backend **emita** tokens de servicio y llame a otros backends (M2M). El
-guard **no lo lee**. Si tenés los dos módulos registrados, es fácil mirar el
+guard **no lo lee**. Si tienes los dos módulos registrados, es fácil mirar el
 archivo, ver un `authServiceUrl` y darlo por configurado cuando en realidad le
 falta al `forRoot`.
 
@@ -124,7 +124,7 @@ Con tokens gordos el error queda **latente**: el guard nunca necesita el catálo
 y todo parece andar. Aparece recién cuando llega el primer token flaco.
 :::
 
-:::caution[Ordená el despliegue antes del flip]
+:::caution[Ordena el despliegue antes del flip]
 El Auth Service pasa a emitir tokens flacos cuando se setea `JWT_EMBED_PERMISOS=false`.
 **Antes** de ese flip, TODOS los backends deben estar en `≥ 0.4.0` con `authServiceUrl`
 + `internalSecret` configurados. Como el guard nuevo acepta ambos formatos, se puede
@@ -153,7 +153,7 @@ Qué pasa si llega un token flaco y algo falta:
 | `jwksCacheTtlSeconds` | number | `86400` (24h) | TTL del cache de claves públicas |
 | `permissionCacheTtlSeconds` | number | `300` (5min) | TTL del catálogo `rol → permisos` que la lib cachea para resolver tokens "flacos" (≥ 0.4.0). Con tokens "gordos" no tiene efecto (los permisos ya vienen en el JWT). |
 | `blacklistCacheTtlSeconds` | number | `30` | TTL del cache de revocación por jti |
-| `internalSecret` | string | (opcional) | Secret que se manda como header `X-Internal-Secret` al consultar `/api/internal/*`. Obligatorio **si** activás `enableBlacklistCheck` o si el Auth Service exige el secreto para el catálogo de permisos. |
+| `internalSecret` | string | (opcional) | Secret que se manda como header `X-Internal-Secret` al consultar `/api/internal/*`. Obligatorio **si** activas `enableBlacklistCheck` o si el Auth Service exige el secreto para el catálogo de permisos. |
 
 ## Configuración recomendada por entorno
 
@@ -164,7 +164,7 @@ AuthGuardModule.forRoot({
   jwksUrl: 'http://localhost:8080/.well-known/jwks.json',
   issuer: 'https://auth.hagemsa.com',
   audience: 'hagemsa-backends',
-  // Sin blacklist en local: no necesitás authServiceUrl ni internalSecret.
+  // Sin blacklist en local: no necesitas authServiceUrl ni internalSecret.
 }),
 ```
 
@@ -175,7 +175,7 @@ AuthGuardModule.forRoot({
   jwksUrl: process.env.AUTH_JWKS_URL!,
   issuer: process.env.AUTH_JWT_ISSUER!,
   audience: process.env.AUTH_JWT_AUDIENCE!,
-  // Las 3 de arriba alcanzan. Agregá lo de abajo solo si querés logout instantáneo:
+  // Las 3 de arriba alcanzan. Agrega lo de abajo solo si quieres logout instantáneo:
   enableBlacklistCheck: true,
   authServiceUrl: process.env.AUTH_SERVICE_URL!,
   internalSecret: process.env.AUTH_INTERNAL_SECRET,
@@ -186,7 +186,7 @@ AuthGuardModule.forRoot({
 
 `forRoot` valida los tokens que **entran** a tu backend. Si además tu backend
 necesita **llamar** a otro backend protegido por su cuenta (sin un usuario en el
-medio), registrá también `forServiceClient` (≥ 0.3.1). Son independientes: podés
+medio), registra también `forServiceClient` (≥ 0.3.1). Son independientes: puedes
 usar uno, el otro, o los dos.
 
 ```typescript

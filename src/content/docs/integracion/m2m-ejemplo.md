@@ -7,9 +7,9 @@ Este es el mismo flujo de [Comunicación backend-a-backend (M2M)](/integracion/m
 pero **completo y concreto**: desde crear el cliente de servicio hasta ver el
 `200` en el backend destino, con verificación y errores comunes.
 
-:::note[Sustituí por tus backends]
+:::note[Sustituye por tus backends]
 El ejemplo usa **Flota** (el que llama) y **WMS / Almacenes** (el que expone el
-endpoint) con el permiso `wms:inventario:read`. **Cambiá los tres por los tuyos**
+endpoint) con el permiso `wms:inventario:read`. **Cambia los tres por los tuyos**
 (backend origen, backend destino, permiso requerido): el flujo es idéntico.
 :::
 
@@ -21,7 +21,7 @@ Hay **dos** permisos en juego, de **actores** y **momentos** distintos:
   Service. **No** interviene en la llamada M2M.
 - **`wms:inventario:read`** (el permiso del endpoint destino) → es el que necesita
   el **cliente de servicio** (`svc-flota`) **en su token** para que WMS lo autorice
-  (paso 5). Viene del **rol** que le asignás al cliente.
+  (paso 5). Viene del **rol** que le asignas al cliente.
 
 Tres actores:
 
@@ -59,7 +59,7 @@ Flota (job, sin usuario)                Auth Service                 WMS
 ```
 
 El endpoint de WMS está protegido así (nada nuevo — es el mismo `@RequirePermission`
-que ya usás para usuarios):
+que ya usas para usuarios):
 
 ```typescript
 // WMS — inventario.controller.ts
@@ -71,7 +71,7 @@ listar(@Param('almacenId') almacenId: string) {
 ```
 
 El truco del M2M es que el **token de servicio** que consigue Flota **también
-lleva permisos embebidos** — los del rol que le asignás al cliente. Si ese rol
+lleva permisos embebidos** — los del rol que le asignas al cliente. Si ese rol
 tiene `wms:inventario:read`, el `@RequirePermission` de WMS lo deja pasar sin
 distinguir si atrás hay una persona o un backend.
 
@@ -79,7 +79,7 @@ distinguir si atrás hay una persona o un backend.
 
 ## Paso 1 — (Admin) Crear un rol con least privilege
 
-Podés reusar un rol existente (ej. `ALMACENERO`), pero lo recomendado es un rol
+Puedes reusar un rol existente (ej. `ALMACENERO`), pero lo recomendado es un rol
 **dedicado** que tenga **solo** lo que el backend necesita. Con un usuario admin
 (`auth:role:manage`):
 
@@ -91,7 +91,7 @@ Content-Type: application/json
 { "nombre": "SVC_FLOTA", "descripcion": "Cliente de servicio: job de inventario de Flota" }
 ```
 
-Respuesta `201` → guardá el `id` del rol. Después agregale el permiso:
+Respuesta `201` → guarda el `id` del rol. Después agregale el permiso:
 
 ```http
 POST /api/admin/roles/<rolId>/permisos
@@ -105,7 +105,7 @@ Content-Type: application/json
 
 ## Paso 2 — (Admin) Crear el cliente de servicio
 
-Con un usuario admin (`auth:service-client:write`), creá `svc-flota` y asignale
+Con un usuario admin (`auth:service-client:write`), crea `svc-flota` y asignale
 el rol del paso 1:
 
 ```http
@@ -121,7 +121,7 @@ Content-Type: application/json
 }
 ```
 
-Respuesta `201` — **acá está el secret, se muestra una única vez**:
+Respuesta `201` — **aquí está el secret, se muestra una única vez**:
 
 ```json
 {
@@ -133,7 +133,7 @@ Respuesta `201` — **acá está el secret, se muestra una única vez**:
 }
 ```
 
-> ⚠️ Copiá el `secret` ahora. No se puede recuperar (solo se guarda su hash
+> ⚠️ Copia el `secret` ahora. No se puede recuperar (solo se guarda su hash
 > Argon2id). Si se pierde, se [rota](/api-reference/service-clients/#post-apiadminservice-clientsidrotar-secreto).
 
 ## Paso 3 — Guardar el secret en el backend Flota
@@ -156,7 +156,7 @@ export GOOGLE_NPM_TOKEN="$(gcloud auth print-access-token)"
 pnpm add @hagemsa/auth-guard@^0.3.1
 ```
 
-Registrá `forServiceClient` (es independiente de `forRoot`; podés tener los dos):
+Registra `forServiceClient` (es independiente de `forRoot`; puedes tener los dos):
 
 ```typescript
 // Flota — app.module.ts
@@ -176,7 +176,7 @@ export class AppModule {}
 
 ## Paso 5 — (Flota) Llamar a WMS
 
-Inyectás el `ServiceTokenProvider` y listo — él consigue, cachea y renueva el
+Inyectas el `ServiceTokenProvider` y listo — él consigue, cachea y renueva el
 token solo:
 
 ```typescript
@@ -259,7 +259,7 @@ El `accessToken` es un JWT de servicio. Decodificado, su payload:
 }
 ```
 
-Fijate: **no** trae `email`/`name`/`type` (no hay usuario), sí trae `tokenUse:
+Fíjate: **no** trae `email`/`name`/`type` (no hay usuario), sí trae `tokenUse:
 "service"`, `clientId`, y los `permisos` embebidos.
 
 **③–④ WMS autoriza**. El `JwtAuthGuard` de WMS:
@@ -296,21 +296,21 @@ curl -s https://wms.hagemsa.com/api/inventario/lima-1 \
 
 | Síntoma | Causa | Solución |
 |---|---|---|
-| `401` en `POST /api/auth/token` (`AUTH_SERVICE_CLIENT_CREDENCIALES_INVALIDAS`) | `clientId` o `clientSecret` mal | Verificá el secret; si se perdió, [rotá](/api-reference/service-clients/#post-apiadminservice-clientsidrotar-secreto). |
-| `403` en el endpoint destino (`COMUN_PROHIBIDO`) | El token es válido pero el `svc-client` **no tiene el permiso** requerido | Agregá el permiso al rol del cliente (paso 1) y **volvé a pedir el token** (los permisos se resuelven al emitir; el token viejo no se actualiza hasta vencer). |
+| `401` en `POST /api/auth/token` (`AUTH_SERVICE_CLIENT_CREDENCIALES_INVALIDAS`) | `clientId` o `clientSecret` mal | Verifica el secret; si se perdió, [rota](/api-reference/service-clients/#post-apiadminservice-clientsidrotar-secreto). |
+| `403` en el endpoint destino (`COMUN_PROHIBIDO`) | El token es válido pero el `svc-client` **no tiene el permiso** requerido | Agrega el permiso al rol del cliente (paso 1) y **vuelve a pedir el token** (los permisos se resuelven al emitir; el token viejo no se actualiza hasta vencer). |
 | `409` en `POST /api/auth/token` (`AUTH_SERVICE_CLIENT_SUSPENDIDO`) | El cliente de servicio está suspendido | Reactivalo con `POST /admin/service-clients/:id/reactivar`. |
-| `403` con `@ServiceOnly()`/`@UserOnly()` | El endpoint restringe por tipo de token | Revisá que el tipo de token coincida con el decorador. Para M2M común, no uses esos decoradores. |
-| Cambié permisos y el backend sigue con `403` | El token cacheado es viejo | Esperá el TTL (10 min) o llamá `serviceTokenProvider.invalidar()` para forzar re-emisión. |
+| `403` con `@ServiceOnly()`/`@UserOnly()` | El endpoint restringe por tipo de token | Revisa que el tipo de token coincida con el decorador. Para M2M común, no uses esos decoradores. |
+| Cambié permisos y el backend sigue con `403` | El token cacheado es viejo | Espera el TTL (10 min) o llama `serviceTokenProvider.invalidar()` para forzar re-emisión. |
 
 ## Rotación del secret (sin downtime)
 
-Un cliente admite **2 secretos activos**, así podés rotar sin cortar:
+Un cliente admite **2 secretos activos**, así puedes rotar sin cortar:
 
 1. `POST /admin/service-clients/:id/rotar-secreto` → te da un `secret` nuevo (el
    viejo sigue vivo).
-2. Actualizá `SVC_CLIENT_SECRET` en Secret Manager y **redeployá** Flota.
+2. Actualiza `SVC_CLIENT_SECRET` en Secret Manager y **redeploya** Flota.
 3. Cuando confirmes que anda con el nuevo,
-   [revocá el viejo](/api-reference/service-clients/#post-apiadminservice-clientsidrevocar-secretosecretoid).
+   [revoca el viejo](/api-reference/service-clients/#post-apiadminservice-clientsidrevocar-secretosecretoid).
 
 ## Checklist
 

@@ -40,7 +40,7 @@ pnpm config set
 ```
 
 Y el install muere con `ERR_PNPM_FETCH_403` **aunque el token sea válido y esté
-presente**. Si te pasa: no busques un token faltante — movelo al `~/.npmrc`.
+presente**. Si te pasa: no busques un token faltante — muévelo al `~/.npmrc`.
 
 (Con pnpm anterior a 11.11 el token en el `.npmrc` del proyecto todavía funciona, pero
 rompe en cuanto pnpm suba de versión.)
@@ -49,14 +49,14 @@ rompe en cuanto pnpm suba de versión.)
 ### 1.2 De dónde sale `GOOGLE_NPM_TOKEN`
 
 `GOOGLE_NPM_TOKEN` **no es un secreto fijo que alguien te pasa**: es un token
-OAuth de **corta vida (~1 hora)** que generás vos mismo con el CLI de Google
+OAuth de **corta vida (~1 hora)** que generas tú mismo con el CLI de Google
 Cloud (`gcloud`), a partir de tu propia identidad de GCP. Cada vez que vas a
-instalar, lo regenerás con `gcloud auth print-access-token`.
+instalar, lo regeneras con `gcloud auth print-access-token`.
 
 **Pasos para poder generarlo (una sola vez):**
 
-1. **Instalá el CLI de gcloud** (Google Cloud SDK):
-   <https://cloud.google.com/sdk/docs/install>. Verificá con `gcloud --version`.
+1. **Instala el CLI de gcloud** (Google Cloud SDK):
+   <https://cloud.google.com/sdk/docs/install>. Verifica con `gcloud --version`.
 
 2. **Autenticate** con tu cuenta corporativa de Google:
 
@@ -65,16 +65,16 @@ instalar, lo regenerás con `gcloud auth print-access-token`.
    ```
 
    Esto abre el navegador. Logueate con la cuenta de HAGEMSA que tenga acceso al
-   proyecto. (Usá `gcloud auth login`, **no** `gcloud auth application-default
+   proyecto. (Usa `gcloud auth login`, **no** `gcloud auth application-default
    login` — este último puede estar bloqueado por política de Workspace.)
 
-3. **Seleccioná el proyecto:**
+3. **Selecciona el proyecto:**
 
    ```bash
    gcloud config set project hagemsa-cloud
    ```
 
-4. **Pedí acceso de lectura al registry.** Tu cuenta necesita el rol
+4. **Pide acceso de lectura al registry.** Tu cuenta necesita el rol
    `roles/artifactregistry.reader` sobre el repo `hagemsa-npm` (o el proyecto
    `hagemsa-cloud`). Solicitalo al equipo de plataforma
    (`cloud.infra@transporteshagemsa.com`) indicando tu email de GCP.
@@ -84,12 +84,12 @@ lib usa. Para confirmar que funciona:
 
 ```bash
 gcloud auth print-access-token
-# Debe imprimir una cadena larga (ya29....). Si pide login, repetí el paso 2.
+# Debe imprimir una cadena larga (ya29....). Si pide login, repite el paso 2.
 ```
 
 ### 1.3 Autenticarte e instalar
 
-Guardá el token en tu `~/.npmrc` de usuario con `pnpm config set`, y después instalá:
+Guarda el token en tu `~/.npmrc` de usuario con `pnpm config set`, y después instala:
 
 ```bash
 pnpm config set "//us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken" "$(gcloud auth print-access-token)"
@@ -108,13 +108,13 @@ pnpm add @hagemsa/auth-guard
 diferencia de una variable de entorno, **persiste entre terminales**: no hay que
 repetirlo en cada sesión, solo cuando el token caduca.
 
-> **El token dura ~1 hora.** Cuando un `install` falle con `401`/`403`, volvé a correr
+> **El token dura ~1 hora.** Cuando un `install` falle con `401`/`403`, vuelve a correr
 > el `pnpm config set` (regenera y reescribe). No hace falta `gcloud auth login` de
 > nuevo salvo que la sesión de gcloud haya expirado.
 
 :::tip[Para no repetirlo cada hora]
 `npx google-artifactregistry-auth` refresca la credencial automáticamente leyendo tu
-sesión de gcloud. Útil si trabajás todos los días contra el registry.
+sesión de gcloud. Útil si trabajas todos los días contra el registry.
 :::
 
 :::caution[¿Por qué no una variable de entorno `GOOGLE_NPM_TOKEN`?]
@@ -128,7 +128,7 @@ repo. Ver [Desplegar a Cloud Run](/integracion/deploy-consumidor/#24-dockerfile)
 :::tip[El token es SOLO para instalar/actualizar — no para producción]
 Que el token dure 1 hora **no afecta a tu backend en producción**. El
 `GOOGLE_NPM_TOKEN` se usa **únicamente** en el momento de **descargar el
-paquete** desde Artifact Registry, es decir cuando corrés `pnpm add` /
+paquete** desde Artifact Registry, es decir cuando corres `pnpm add` /
 `pnpm install` (al agregar la lib o al actualizar su versión).
 
 Una vez instalada, `@hagemsa/auth-guard` es **código en `node_modules`** que se
@@ -149,7 +149,7 @@ función en el `pnpm install` del build.
 
 ### 1.4 En CI / Cloud Run
 
-- **Cloud Build / CI:** pasá el token como `--build-arg GOOGLE_NPM_TOKEN` y, dentro del
+- **Cloud Build / CI:** pasa el token como `--build-arg GOOGLE_NPM_TOKEN` y, dentro del
   Dockerfile, **escribilo en el `.npmrc` de usuario** antes del `pnpm install` (no en
   el del proyecto — pnpm lo ignoraría, ver 1.1):
 
@@ -173,24 +173,24 @@ función en el `pnpm install` del build.
 ### 1.5 Actualizar a una versión nueva
 
 `pnpm add @hagemsa/auth-guard` (sin versión) instala la **última**. Si ya la
-tenés y querés **subir de versión** (o fijar una concreta), pasá la versión y
-regenerá el lockfile:
+tienes y quieres **subir de versión** (o fijar una concreta), pasa la versión y
+regenera el lockfile:
 
 ```bash
-# generá el token primero (igual que en el install)
+# genera el token primero (igual que en el install)
 export GOOGLE_NPM_TOKEN="$(gcloud auth print-access-token)"   # PowerShell: $env:GOOGLE_NPM_TOKEN = (gcloud auth print-access-token)
 
 pnpm add @hagemsa/auth-guard@0.3.1     # sube package.json + pnpm-lock.yaml
 ```
 
-Después **redeployá** tu backend (ej. `gcloud builds submit ...`). El build corre
+Después **redeploya** tu backend (ej. `gcloud builds submit ...`). El build corre
 `pnpm install --frozen-lockfile`, así que **sin** actualizar el lockfile seguirías
 trayendo la versión vieja. Ver el [historial de versiones](/operaciones/publicar-libreria/#historial-de-versiones)
 para saber qué trae cada una.
 
 :::note[Versión 0.2.0 — códigos y socio de negocio]
 Desde **0.2.0**, el `AuthContext` expone campos opcionales adicionales. Si tu
-backend los necesita, instalá `@hagemsa/auth-guard@^0.2.0`:
+backend los necesita, instala `@hagemsa/auth-guard@^0.2.0`:
 
 - `codigoSocio`, `codigoCuenta` — códigos internos de la **cuenta** (para PDFs),
   1-20 alfanuméricos. **Independientes del socio**: presentes si la cuenta los
@@ -212,7 +212,7 @@ existentes siguen igual):
   backend obtenga tokens de servicio y llame a otros backends.
 
 Si tu backend va a **llamar** a otro por su cuenta o a **restringir** endpoints
-por tipo de token, subí a `@hagemsa/auth-guard@^0.3.1` y seguí
+por tipo de token, sube a `@hagemsa/auth-guard@^0.3.1` y sigue
 [Comunicación backend-a-backend (M2M)](/integracion/m2m/).
 :::
 
@@ -228,7 +228,7 @@ Cambios **aditivos y retrocompatibles**:
 - **Tus endpoints no cambian**: los decoradores (`@RequirePermission`, `@RequireScope`,
   `@CurrentUser`) y el shape de `AuthContext` siguen igual. El único ajuste es de
   configuración (el punto siguiente).
-- **Definí estas dos variables** — sin ellas el guard no puede resolver un token
+- **Define estas dos variables** — sin ellas el guard no puede resolver un token
   flaco y responde **500**:
 
   ```bash
@@ -248,20 +248,20 @@ Cambios **aditivos y retrocompatibles**:
 
   Si ya usabas `enableBlacklistCheck`, ya las tenías: son las mismas. Ojo, hay que
   definirlas **también en el deploy** (Cloud Run), no alcanza con el código.
-- **Orden de despliegue:** actualizá a `^0.4.0` en TODOS los backends **antes** de
+- **Orden de despliegue:** actualiza a `^0.4.0` en TODOS los backends **antes** de
   que el Auth Service pase a emitir tokens flacos. Ver
   [Configuración → Con tokens flacos](/integracion/configuracion/#con-tokens-flacos).
 :::
 
 ## 2. Variables de entorno
 
-Agregá a tu `.env`:
+Agrega a tu `.env`:
 
 ```bash
 # --- Mínimo: validar JWT + permisos + scopes ---
 # URL del JWKS del Auth Service.
 AUTH_JWKS_URL=https://auth.hagemsa.com/.well-known/jwks.json
-# Issuer y audience que esperás en los JWT (deben coincidir EXACTO con lo que emite el Auth Service).
+# Issuer y audience que esperas en los JWT (deben coincidir EXACTO con lo que emite el Auth Service).
 AUTH_JWT_ISSUER=https://auth.hagemsa.com
 AUTH_JWT_AUDIENCE=hagemsa-backends
 
@@ -277,10 +277,10 @@ AUTH_INTERNAL_SECRET=<secreto-compartido>
 
 > Con las **tres primeras** alcanza para autorizar mientras el JWT sea "gordo"
 > (permisos embebidos). `AUTH_SERVICE_URL` y `AUTH_INTERNAL_SECRET` hacen falta si
-> activás `enableBlacklistCheck` **o** si vas a resolver tokens "flacos" por
+> activas `enableBlacklistCheck` **o** si vas a resolver tokens "flacos" por
 > catálogo (≥ 0.4.0, cuando el Auth Service emita con `JWT_EMBED_PERMISOS=false`).
-> Los nombres de las variables son tuyos —vos las mapeás a la config de la lib en
-> `app.module.ts`—; acá usamos estos por consistencia con el resto de la doc.
+> Los nombres de las variables son tuyos —tú las mapeas a la config de la lib en
+> `app.module.ts`—; aquí usamos estos por consistencia con el resto de la doc.
 
 :::note[Es UN solo secreto, con dos nombres]
 `INTERNAL_SHARED_SECRET` y `AUTH_INTERNAL_SECRET` **no son dos secretos**: son el
@@ -294,7 +294,7 @@ AUTH_INTERNAL_SECRET=<secreto-compartido>
 Relación **1 emisor / N copias**: se genera una vez en el Auth Service y cada
 consumidor lleva una copia byte-exacta.
 
-**No creás un secreto nuevo para el catálogo.** El `INTERNAL_SHARED_SECRET` del
+**No creas un secreto nuevo para el catálogo.** El `INTERNAL_SHARED_SECRET` del
 Auth Service **ya existe** (lo usa la blacklist de `jti`); el endpoint de catálogo
 lo reusa. Si tu backend ya tenía `AUTH_INTERNAL_SECRET` configurado (p. ej. para
 blacklist), ya estás — no hay nada que crear ni cambiar.
@@ -307,8 +307,8 @@ En **producción** los secretos vienen de **Secret Manager** (GCP), no de un `.e
 Es el shared secret del Auth Service (`INTERNAL_SHARED_SECRET`). Dos vías:
 
 - **Pedirlo al equipo de plataforma** (`cloud.infra@transporteshagemsa.com`) — lo
-  habitual si solo integrás un backend.
-- **Leerlo vos** si tenés rol `roles/secretmanager.secretAccessor` sobre el secreto:
+  habitual si solo integras un backend.
+- **Leerlo tú** si tienes rol `roles/secretmanager.secretAccessor` sobre el secreto:
   ```bash
   gcloud secrets versions access latest \
     --secret=internal-shared-secret --project=hagemsa-cloud
@@ -320,7 +320,7 @@ compara byte-exacto. Detalle de generación/rotación en
 
 ## 3. Verificar conectividad
 
-Antes de cablear el módulo, validá manualmente que tu backend alcanza al Auth Service:
+Antes de cablear el módulo, valida manualmente que tu backend alcanza al Auth Service:
 
 ```bash
 # El JWKS debe responder 200 con un objeto { keys: [...] }

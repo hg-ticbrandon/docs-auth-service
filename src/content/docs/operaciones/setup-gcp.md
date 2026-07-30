@@ -171,10 +171,10 @@ Si el proyecto tiene bindings con `condition` (por ejemplo, Developer Connect), 
 El bloque del paso 2 cubre lo mínimo. Si vas a habilitar features extra, agregar:
 
 ```bash
-# Si usás Memorystore Redis para cache de permisos:
+# Si usas Memorystore Redis para cache de permisos:
 gcloud services enable redis.googleapis.com
 
-# Si configurás Cloud Build trigger sobre GitHub:
+# Si configuras Cloud Build trigger sobre GitHub:
 gcloud services enable cloudbuild.googleapis.com  # (ya está en el paso 2)
 gcloud services enable iam.googleapis.com         # (ya está)
 ```

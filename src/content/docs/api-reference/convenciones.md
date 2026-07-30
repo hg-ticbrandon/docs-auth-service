@@ -213,7 +213,7 @@ Hay un límite global de **60 requests por minuto por IP** en cualquier endpoint
 
 ## Correlation ID
 
-Cada request tiene un `X-Request-Id`. Si lo mandás en el header, el Auth Service lo respeta y lo devuelve en la response (útil para tracing distribuido). Si no, se genera uno. El mismo valor aparece como `trazaId` en el body de cualquier respuesta de error.
+Cada request tiene un `X-Request-Id`. Si lo mandas en el header, el Auth Service lo respeta y lo devuelve en la response (útil para tracing distribuido). Si no, se genera uno. El mismo valor aparece como `trazaId` en el body de cualquier respuesta de error.
 
 ## Idioma
 

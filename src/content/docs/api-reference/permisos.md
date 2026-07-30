@@ -127,4 +127,4 @@ Ver [Permisos y scopes](/integracion/permisos-scopes/#convención-de-códigos-de
 
 El `prisma/seed.ts` del Auth Service también puede crear permisos (vía `prisma.permission.upsert`). Eso sigue funcionando — el seed inserta el catálogo base la primera vez y se puede re-ejecutar sin error.
 
-Para agregar permisos en runtime, ahora se puede usar `POST /api/admin/permisos` directamente desde la UI admin sin tocar el seed. Si querés que el nuevo permiso aparezca también en futuros despliegues limpios, agregalo además al `seed.ts`.
+Para agregar permisos en runtime, ahora se puede usar `POST /api/admin/permisos` directamente desde la UI admin sin tocar el seed. Si quieres que el nuevo permiso aparezca también en futuros despliegues limpios, agregalo además al `seed.ts`.

@@ -21,13 +21,13 @@ Response: { "jti": "...", "revoked": false }  → token válido
           { "jti": "...", "revoked": true }   → 401 Sesión revocada
 ```
 
-La lib `@hagemsa/auth-guard` hace esto por vos cuando seteás `enableBlacklistCheck: true`.
+La lib `@hagemsa/auth-guard` hace esto por ti cuando seteas `enableBlacklistCheck: true`.
 
 ## Cache de 30 segundos
 
 Para evitar golpear al Auth Service en cada request, la lib cachea el resultado por `jti` durante 30 segundos (configurable).
 
-**Esto significa:** desde el logout hasta que tu backend rechaza el token, hay una ventana de **hasta 30 segundos**. Aceptable para la mayoría de casos. Si necesitás revocación instantánea, podés:
+**Esto significa:** desde el logout hasta que tu backend rechaza el token, hay una ventana de **hasta 30 segundos**. Aceptable para la mayoría de casos. Si necesitas revocación instantánea, puedes:
 
 - Bajar `blacklistCacheTtlSeconds` a `0` (sin cache, +1 fetch por request).
 - Usar Server-Sent Events o WebSockets para invalidación push (no implementado aún).
@@ -42,7 +42,7 @@ Si el endpoint `/api/internal/jti/:jti/revoked` no responde (Auth Service caído
 
 Cuando un usuario hace logout en tu backend:
 
-1. Llamás al Auth Service:
+1. Llamas al Auth Service:
    ```http
    POST /api/auth/logout
    Authorization: Bearer <jwt>
@@ -67,7 +67,7 @@ Para revocar todas, repetir el POST por cada sesión activa.
 ## Cómo activar la blacklist
 
 Por default está **desactivada** (`enableBlacklistCheck: false`). Para activarla,
-en tu `AuthGuardModule.forRoot({...})` necesitás **tres** cosas juntas — no alcanza
+en tu `AuthGuardModule.forRoot({...})` necesitas **tres** cosas juntas — no alcanza
 con la flag sola:
 
 ```typescript
@@ -86,7 +86,7 @@ AuthGuardModule.forRoot({
 }),
 ```
 
-> Si activás `enableBlacklistCheck` pero **olvidás `authServiceUrl` o
+> Si activas `enableBlacklistCheck` pero **olvidas `authServiceUrl` o
 > `internalSecret`**, el endpoint interno responde 401 y —por fail-closed— tu
 > backend rechaza **todos** los requests con 401. Las tres opciones van juntas.
 
@@ -98,13 +98,13 @@ Detalle completo de cada opción en [Configuración](/integracion/configuracion/
 
 ## Cuándo NO usar blacklist
 
-Si tu backend prioriza latencia/simplicidad (validación 100% local, sin fetch al Auth Service) y aceptás que un logout tarde hasta el TTL del access token en surtir efecto, podés saltarte la blacklist:
+Si tu backend prioriza latencia/simplicidad (validación 100% local, sin fetch al Auth Service) y aceptas que un logout tarde hasta el TTL del access token en surtir efecto, puedes saltarte la blacklist:
 
 ```typescript
 enableBlacklistCheck: false
 ```
 
-Ventana de revocación = TTL del access token (hoy **1 hora**, `JWT_ACCESS_TTL_SECONDS`). El refresh con rotación bloquea futuras emisiones, así que tras ese plazo el atacante no puede renovar. Si necesitás revocación más inmediata, activá la blacklist o bajá el TTL del access. Es la configuración que usa el backend de prueba de referencia.
+Ventana de revocación = TTL del access token (hoy **1 hora**, `JWT_ACCESS_TTL_SECONDS`). El refresh con rotación bloquea futuras emisiones, así que tras ese plazo el atacante no puede renovar. Si necesitas revocación más inmediata, activa la blacklist o baja el TTL del access. Es la configuración que usa el backend de prueba de referencia.
 
 ## Próximo paso
 

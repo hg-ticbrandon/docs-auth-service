@@ -70,7 +70,7 @@ Readiness probe — responde 200 solo si el servicio puede procesar requests (DB
 
 **Cómo se usa:**
 
-- `startupProbe` y `readinessProbe` de Cloud Run apuntan acá.
+- `startupProbe` y `readinessProbe` de Cloud Run apuntan aquí.
 - Cloud Run no enruta tráfico hasta que `/health/ready` responde 200.
 
 ## GET /health/info

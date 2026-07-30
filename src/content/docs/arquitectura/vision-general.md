@@ -63,7 +63,7 @@ El Auth Service sigue **Domain-Driven Design (DDD) táctico** con arquitectura *
 | `infrastructure/` | `domain/`, `application/ports/`, `shared/` | controllers, otros módulos directamente |
 | `interfaces/` | `application/`, `shared/` | `domain/` directamente, `infrastructure/` directamente |
 
-**Regla crítica:** el `domain/` nunca importa nada del framework. Si necesitás algo del framework, va en `application/` o `infrastructure/`.
+**Regla crítica:** el `domain/` nunca importa nada del framework. Si necesitas algo del framework, va en `application/` o `infrastructure/`.
 
 ## Stack tecnológico
 

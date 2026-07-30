@@ -95,4 +95,4 @@ Una alternativa era tener un solo módulo `auth` con todo adentro. Se eligió se
 
 - **Evolucionan a distintas velocidades.** Authorization recibió 3x más cambios que identity en los primeros sprints.
 - **Permite migrar a microservicios reales** si en el futuro alguno (auditoría, autorización) necesita escalar independientemente.
-- **Hace más fácil el reasoning.** Si tocás `sessions/`, sabés que no afectás reglas de `identity/`.
+- **Hace más fácil el reasoning.** Si tocas `sessions/`, sabes que no afectas reglas de `identity/`.

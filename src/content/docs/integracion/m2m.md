@@ -9,8 +9,8 @@ backend** sin un usuario en el medio (un job, un consumidor de cola, una
 sincronización), no hay token de usuario que reenviar. Para eso existen los
 **clientes de servicio** y el grant **OAuth2 client credentials**.
 
-> ¿Preferís seguir un caso concreto de punta a punta (crear el cliente → pedir el
-> token → ver el `200` en el otro backend)? Andá directo al
+> ¿Prefieres seguir un caso concreto de punta a punta (crear el cliente → pedir el
+> token → ver el `200` en el otro backend)? Ve directo al
 > [Ejemplo end-to-end (M2M)](/integracion/m2m-ejemplo/).
 
 ## Cómo funciona
@@ -59,7 +59,7 @@ Content-Type: application/json
 }
 ```
 
-La respuesta trae el `secret` **una única vez** — guardalo en el Secret Manager
+La respuesta trae el `secret` **una única vez** — guárdalo en el Secret Manager
 del backend consumidor. Detalle completo del CRUD (rotar, revocar, suspender) en
 [Clientes de servicio (admin)](/api-reference/service-clients/).
 
@@ -91,7 +91,7 @@ import { AuthGuardModule } from '@hagemsa/auth-guard';
 export class AppModule {}
 ```
 
-Después, inyectá el provider donde hagas la llamada saliente:
+Después, inyecta el provider donde hagas la llamada saliente:
 
 ```typescript
 import { Injectable } from '@nestjs/common';
@@ -111,9 +111,9 @@ export class WmsClient {
 }
 ```
 
-`getToken()` devuelve el string del JWT si preferís armar el header a mano.
-`invalidar()` descarta el token cacheado (útil si recibís un `401` inesperado y
-querés forzar una re-emisión).
+`getToken()` devuelve el string del JWT si prefieres armar el header a mano.
+`invalidar()` descarta el token cacheado (útil si recibes un `401` inesperado y
+quieres forzar una re-emisión).
 
 ### Secret vs token: dos ciclos de vida distintos
 
@@ -123,16 +123,16 @@ administran distinto:
 | | **Secret** (`cs_…`) | **Token de servicio** (JWT) |
 |---|---|---|
 | Qué es | La **credencial** de largo plazo del cliente (como una password) | Un JWT de vida corta que el secret te consigue |
-| Vencimiento | **No vence por defecto** (`expira_en = null`); solo si lo revocás o lo rotás con "gracia" | **10 min** (`SERVICE_TOKEN_TTL_SECONDS`) |
-| Quién lo administra | **Vos** (admin): rotar / revocar cuando quieras o si se compromete | La **lib** (`ServiceTokenProvider`): lo pide, cachea, renueva ~60s antes de vencer y hace single-flight |
+| Vencimiento | **No vence por defecto** (`expira_en = null`); solo si lo revocas o lo rotas con "gracia" | **10 min** (`SERVICE_TOKEN_TTL_SECONDS`) |
+| Quién lo administra | **Tú** (admin): rotar / revocar cuando quieras o si se compromete | La **lib** (`ServiceTokenProvider`): lo pide, cachea, renueva ~60s antes de vencer y hace single-flight |
 | Dónde vive | En el **Secret Manager** del backend consumidor | En **memoria** del proceso (no se persiste) |
 
-En una frase: **la lib administra el token automáticamente; el secret lo administrás vos.**
+En una frase: **la lib administra el token automáticamente; el secret lo administras tú.**
 
 :::caution[Si el secret se revoca o expira, la lib NO consigue otro sola]
 El `ServiceTokenProvider` usa el secret que le diste en la config para pedir
 tokens. Si ese secret deja de valer (lo revocaste, lo rotaste, se comprometió),
-las próximas emisiones fallan con `401` — y ahí sos vos quien **rota el secret,
+las próximas emisiones fallan con `401` — y ahí eres tú quien **rota el secret,
 actualiza `SVC_CLIENT_SECRET` en el Secret Manager y redeploya**. La lib solo
 renueva el **token** (10 min), nunca el secret.
 :::
@@ -140,7 +140,7 @@ renueva el **token** (10 min), nunca el secret.
 ## 3. Restringir por tipo de token (opcional)
 
 Por defecto un endpoint acepta **tokens de usuario y de servicio** — decide por
-permisos. Si un endpoint debe restringirse a un solo tipo, usá los decoradores
+permisos. Si un endpoint debe restringirse a un solo tipo, usa los decoradores
 opt-in:
 
 ```typescript
@@ -162,9 +162,9 @@ y `clientId`; `email`/`name`/`type` vienen vacíos (no hay usuario detrás).
 
 - El `clientSecret` va **solo** en el Secret Manager del consumidor, nunca en el
   código ni en el repo.
-- **Least privilege:** asigná al cliente solo los roles que necesita.
-- **Rotación sin downtime:** un cliente admite 2 secretos activos. Rotá, desplegá
-  el nuevo secret, revocá el viejo.
+- **Least privilege:** asigna al cliente solo los roles que necesita.
+- **Rotación sin downtime:** un cliente admite 2 secretos activos. Rota, despliega
+  el nuevo secret, revoca el viejo.
 - **Revocación:** suspender el cliente corta futuras emisiones; para matar un
   token vivo al instante (raro, por el TTL de 10 min) está la blacklist de `jti`.
 - Cada emisión queda **auditada** (`clientId`, IP) con el evento

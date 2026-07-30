@@ -107,7 +107,7 @@ async function reenviar(request: NextRequest, ctx: Ctx) {
   const respuesta = await fetch(urlDestino, {
     method: request.method,
     headers: {
-      Authorization: `Bearer ${accessToken}`,   // ← acá viaja el token al backend
+      Authorization: `Bearer ${accessToken}`,   // ← aquí viaja el token al backend
       ...(contentType ? { "Content-Type": contentType } : {}),
     },
     body: METODOS_CON_BODY.has(request.method) ? await request.text() : undefined,
@@ -139,7 +139,7 @@ Ver [Proteger endpoints](/integracion/proteger-endpoints/) y
 
 ## Varios backends, el mismo token
 
-Acá está la clave de por qué esto escala a N backends:
+Aquí está la clave de por qué esto escala a N backends:
 
 - **Todos los backends confían en el mismo emisor.** Un JWT con
   `iss=https://auth.hagemsa.com` y `aud=hagemsa-backends` es válido en **cualquier**
@@ -152,7 +152,7 @@ Acá está la clave de por qué esto escala a N backends:
 
 ### Cómo sumar un backend nuevo al frontend
 
-Replicá el patrón BFF: una ruta proxy en Next por backend, que lee la cookie y
+Replica el patrón BFF: una ruta proxy en Next por backend, que lee la cookie y
 reenvía con Bearer. Por ejemplo, para un backend de despacho:
 
 ```typescript

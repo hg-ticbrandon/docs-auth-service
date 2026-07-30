@@ -35,7 +35,7 @@ administra en runtime con `POST /api/admin/permisos` (o desde la UI admin del
 frontend) por cuentas con el permiso `auth:role:manage`. El `prisma/seed.ts` solo
 provee un catálogo base por default; no es la fuente de verdad.
 
-**Antes de usar un permiso nuevo en tu backend, coordiná con el equipo de plataforma para crearlo.**
+**Antes de usar un permiso nuevo en tu backend, coordina con el equipo de plataforma para crearlo.**
 
 ## Cómo asignar permisos a un rol
 
@@ -83,11 +83,11 @@ Cuando un endpoint requiere `wms:inventario:write` con scope `almacenId`:
 > **Token "flaco" (≥ 0.4.0, con `JWT_EMBED_PERMISOS=false`):** el JWT lleva solo
 > `{ role, scope }` y la lib resuelve `rol → permisos` desde el catálogo del Auth
 > Service (`GET /api/internal/roles-permisos`), cacheado en memoria
-> (`permissionCacheTtlSeconds`, default 300s). Acá los cambios de permisos se
+> (`permissionCacheTtlSeconds`, default 300s). Aquí los cambios de permisos se
 > reflejan al vencer ese TTL, sin esperar a que el token se refresque.
 >
-> En cualquier caso, si necesitás ver los permisos actuales de un rol
-> (admin/auditoría), consultá `GET /api/admin/roles/:id`, que los devuelve en
+> En cualquier caso, si necesitas ver los permisos actuales de un rol
+> (admin/auditoría), consulta `GET /api/admin/roles/:id`, que los devuelve en
 > `datos.permisos`.
 
 ## Patrones comunes

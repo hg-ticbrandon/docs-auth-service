@@ -98,14 +98,14 @@ SELECT count(*) FROM pg_stat_activity WHERE datname = 'db_auth_service';
 
 ## Rotación de claves JWT
 
-Cuando rotás `jwt-private-key`:
+Cuando rotas `jwt-private-key`:
 
 1. Subir nueva versión al secret.
 2. Redeploy del Auth Service → carga la nueva privada y la nueva pública con un `kid` diferente.
 3. El JWKS expone el nuevo `kid`.
-4. JWTs viejos siguen verificándose hasta que sus `exp` pasen — pero solo si los backends aún cachean la clave vieja. Si refrescaron el cache, los viejos JWTs fallan inmediatamente.
+4. JWTs viejos siguen verificandose hasta que sus `exp` pasen — pero solo si los backends aún cachean la clave vieja. Si refrescaron el cache, los viejos JWTs fallan inmediatamente.
 
-**Para minimizar disrupción:** rotar fuera de hora pico. Si necesitás zero-downtime, exponer ambas claves en JWKS por una ventana (no implementado aún — TODO).
+**Para minimizar disrupción:** rotar fuera de hora pico. Si necesitas zero-downtime, exponer ambas claves en JWKS por una ventana (no implementado aún — TODO).
 
 ## Reverir a una versión anterior
 

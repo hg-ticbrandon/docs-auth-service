@@ -53,7 +53,7 @@ Content-Type: application/json
 }
 ```
 
-> **Guardá el `secret` ahora.** Va al Secret Manager del backend consumidor. No
+> **Guarda el `secret` ahora.** Va al Secret Manager del backend consumidor. No
 > vuelve a mostrarse.
 
 **Errores:**
@@ -137,7 +137,7 @@ Content-Type: application/json
 
 | HTTP | `codigo` | Cuándo |
 |---|---|---|
-| 409 | `AUTH_SERVICE_CLIENT_MAX_SECRETOS` | Ya hay 2 secretos activos. Revocá uno antes de rotar. |
+| 409 | `AUTH_SERVICE_CLIENT_MAX_SECRETOS` | Ya hay 2 secretos activos. Revoca uno antes de rotar. |
 | 404 | `AUTH_SERVICE_CLIENT_NO_ENCONTRADO` | El cliente no existe. |
 
 ## POST /api/admin/service-clients/:id/revocar-secreto/:secretoId

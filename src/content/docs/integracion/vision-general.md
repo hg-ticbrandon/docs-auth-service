@@ -11,7 +11,7 @@ Esta sección es para devs que están construyendo o manteniendo un backend dent
 - Acceso de lectura al Artifact Registry interno de HAGEMSA (para instalar `@hagemsa/auth-guard`). [Ver instalación →](/integracion/instalacion/)
 - Variables de entorno para apuntar al Auth Service:
   - **Mínimo (validar JWT + permisos + scopes):** `AUTH_JWKS_URL`, `AUTH_JWT_ISSUER`, `AUTH_JWT_AUDIENCE`.
-  - **Para blacklist (logout instantáneo) o tokens "flacos" (≥ 0.4.0, `JWT_EMBED_PERMISOS=false`):** sumá `AUTH_SERVICE_URL` y `AUTH_INTERNAL_SECRET`. Con tokens "gordos" y sin blacklist no hacen falta.
+  - **Para blacklist (logout instantáneo) o tokens "flacos" (≥ 0.4.0, `JWT_EMBED_PERMISOS=false`):** suma `AUTH_SERVICE_URL` y `AUTH_INTERNAL_SECRET`. Con tokens "gordos" y sin blacklist no hacen falta.
 
 ## Lo que vas a hacer
 
@@ -36,9 +36,9 @@ Cuando un cliente hace una request a tu backend:
 6. Tu backend procesa la request si todo OK, devuelve 401/403 si no
 ```
 
-La lib `@hagemsa/auth-guard` hace 1-6 por vos. Solo tenés que decirle qué permiso y scope requiere cada endpoint.
+La lib `@hagemsa/auth-guard` hace 1-6 por ti. Solo tienes que decirle qué permiso y scope requiere cada endpoint.
 
-> **Importante:** por default los permisos y scopes vienen **embebidos en el JWT** (`roles[].permisos`, `roles[].scope`), así que la lib NO hace round-trip al Auth Service para autorizar. El único fetch en runtime es el chequeo de blacklist del paso 4, y **solo** si activás `enableBlacklistCheck`. Sin esa opción, validar un request es 100% local (una operación criptográfica). Trade-off: un cambio de permisos en un rol recién se refleja cuando el access token expira y se refresca (~TTL del access, hoy 1 hora).
+> **Importante:** por default los permisos y scopes vienen **embebidos en el JWT** (`roles[].permisos`, `roles[].scope`), así que la lib NO hace round-trip al Auth Service para autorizar. El único fetch en runtime es el chequeo de blacklist del paso 4, y **solo** si activas `enableBlacklistCheck`. Sin esa opción, validar un request es 100% local (una operación criptográfica). Trade-off: un cambio de permisos en un rol recién se refleja cuando el access token expira y se refresca (~TTL del access, hoy 1 hora).
 >
 > Desde **0.4.0**, si el Auth Service emite tokens "flacos" (`JWT_EMBED_PERMISOS=false`), la lib resuelve `rol → permisos` desde el catálogo del Auth Service **cacheado en memoria** (`permissionCacheTtlSeconds`, default 300s). Ahí sí hay un fetch, pero amortizado por el TTL del catálogo y compartido entre todas las requests (single-flight).
 
@@ -52,7 +52,7 @@ La lib `@hagemsa/auth-guard` hace 1-6 por vos. Solo tenés que decirle qué perm
 
 > Con tokens "gordos" (default) los **permisos NO se consultan**: vienen embebidos en el JWT, así que `permissionCacheTtlSeconds` no tiene efecto. Solo entra en juego con tokens "flacos" (`JWT_EMBED_PERMISOS=false`), donde la lib cachea el catálogo `rol → permisos` durante ese TTL.
 
-En condiciones normales (cache caliente), validar un JWT cuesta **una operación criptográfica local**. Si activás blacklist, se suma un fetch al Auth Service por jti cada 30s. Latencia esperada: < 5ms.
+En condiciones normales (cache caliente), validar un JWT cuesta **una operación criptográfica local**. Si activas blacklist, se suma un fetch al Auth Service por jti cada 30s. Latencia esperada: < 5ms.
 
 ## Modelo de fallo
 

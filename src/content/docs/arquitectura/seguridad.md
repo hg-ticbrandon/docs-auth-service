@@ -43,7 +43,7 @@ Estas reglas son **absolutas** (ver `CLAUDE.md §5.3` en el repo). Si te encuent
 
 ### `JWT_PRIVATE_KEY` no es un "JWT secret" cualquiera
 
-En muchos tutoriales y proyectos basados en `jsonwebtoken` con HS256 vas a ver una sola env var del estilo `JWT_SECRET=mistring`. Acá tenemos algo diferente:
+En muchos tutoriales y proyectos basados en `jsonwebtoken` con HS256 vas a ver una sola env var del estilo `JWT_SECRET=mistring`. Aquí tenemos algo diferente:
 
 | | Tutoriales con `JWT_SECRET` (HS256) | Este proyecto (RS256) |
 |---|---|---|
@@ -95,7 +95,7 @@ Esta es una pregunta razonable y la respuesta resumida es: **el modelo está dis
 | **Cookies `httpOnly`** | El JWT vive en cookie httpOnly que JavaScript no puede leer. Bloquea XSS, el vector #1 de robo. |
 | **HTTPS + `Secure`** | El JWT viaja siempre por TLS. Un atacante en la red local no lo ve. |
 | **`SameSite=Lax`** | Las cookies no se envían a sitios cruzados. Mitiga CSRF. |
-| **Blacklist de `jti`** | Si detectás el robo, el admin revoca el `jti` y el token muere al instante. |
+| **Blacklist de `jti`** | Si detectas el robo, el admin revoca el `jti` y el token muere al instante. |
 | **Refresh token rotation con detección de reuso** | Si el atacante usa un refresh viejo, se revoca toda la familia automáticamente. |
 | **Audit log append-only** | Cada login, refresh y revocación queda registrado con IP y user-agent. Comportamiento anómalo se detecta. |
 
@@ -196,7 +196,7 @@ Idempotente — si N instancias del Auth Service corren a la vez, el primer DELE
 
 ## Postura ante incidentes
 
-Si sospechás compromiso de:
+Si sospechas compromiso de:
 
 - **Clave privada JWT:** rotar inmediatamente. Generar nuevo par RSA, subirlo a Secret Manager, redeploy. Los JWTs viejos quedan inválidos (nuevo `kid` no aparece en JWKS).
 - **Internal shared secret:** rotar en Secret Manager. Todos los backends deben recibir el nuevo simultáneamente. Mientras se propaga, hay un período de `fail-closed` que rechaza algunas requests.

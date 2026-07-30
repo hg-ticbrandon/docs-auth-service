@@ -25,7 +25,7 @@ Lista completa de códigos `AUTH_*` en [Roles](/api-reference/roles/), [Cuentas]
 
 ## 401 sesión revocada cuando el JWT fue recién emitido
 
-**Síntoma:** loguás, obtenés un JWT, llamás a tu backend y devuelve 401 con cuerpo:
+**Síntoma:** logueas, obtienes un JWT, llamas a tu backend y devuelve 401 con cuerpo:
 
 ```json
 {
@@ -44,7 +44,7 @@ Lista completa de códigos `AUTH_*` en [Roles](/api-reference/roles/), [Cuentas]
 
 **Causa más común:** el `BlacklistChecker` está consultando `/api/internal/jti/:jti/revoked` y el Auth Service devuelve 401 porque tu backend **no está mandando el `X-Internal-Secret`** correctamente. La lib aplica fail-closed y rechaza el JWT.
 
-**Solución:** verificá que pasaste `internalSecret` en la config:
+**Solución:** verifica que pasaste `internalSecret` en la config:
 
 ```typescript
 AuthGuardModule.forRoot({
@@ -63,9 +63,9 @@ Y que la env `AUTH_INTERNAL_SECRET` coincide exactamente con la del Auth Service
 
 **Soluciones:**
 
-1. Verificá que `jwksUrl` apunta al Auth Service correcto (no a otro entorno).
-2. La lib refresca automáticamente al detectar cache miss. Si sigue fallando, hacé un fetch manual: `curl <AUTH_JWKS_URL>` y compará el `kid` con el del JWT (decodificalo en jwt.io).
-3. Si el Auth Service rotó claves, esperá unos segundos para que la lib refresque.
+1. Verifica que `jwksUrl` apunta al Auth Service correcto (no a otro entorno).
+2. La lib refresca automáticamente al detectar cache miss. Si sigue fallando, haz un fetch manual: `curl <AUTH_JWKS_URL>` y compara el `kid` con el del JWT (decodificalo en jwt.io).
+3. Si el Auth Service rotó claves, espera unos segundos para que la lib refresque.
 
 ## 403 con codigo: COMUN_PROHIBIDO
 
@@ -73,18 +73,18 @@ Y que la env `AUTH_INTERNAL_SECRET` coincide exactamente con la del Auth Service
 
 **Causas posibles:**
 
-1. **El rol del usuario no tiene el permiso requerido.** Verificá con un admin:
+1. **El rol del usuario no tiene el permiso requerido.** Verifica con un admin:
    ```http
    GET /api/admin/roles/:id  → lista los permisos del rol en datos.permisos
    ```
-2. **El usuario tiene el permiso, pero el scope no coincide.** Verificá:
+2. **El usuario tiene el permiso, pero el scope no coincide.** Verifica:
    - El JWT en `roles[]` muestra el scope efectivo del rol.
    - El `paramKey` del decorador coincide con el nombre del param de tu endpoint.
    - El `scopeKey` coincide con la key del JSON de scope.
 
 ## 401 con codigo: AUTH_TOKEN_INVALIDO
 
-Mensaje genérico cuando `jsonwebtoken` no puede verificar. Habilitá logs `debug` en el guard para ver el detalle:
+Mensaje genérico cuando `jsonwebtoken` no puede verificar. Habilita logs `debug` en el guard para ver el detalle:
 
 ```typescript
 NestFactory.create(AppModule, { logger: ['error', 'warn', 'log', 'debug'] })
@@ -96,7 +96,7 @@ Los logs del `JwtAuthGuard` te dirán si el problema es:
 - `jwt expired` → el `exp` del token ya pasó. Hay que refrescar.
 - `audience invalid` → `aud` del JWT no coincide con tu config.
 - `jwt issuer invalid` → `iss` no coincide.
-- `invalid signature` → la clave pública no firma este JWT. Probablemente apuntás al JWKS equivocado.
+- `invalid signature` → la clave pública no firma este JWT. Probablemente apuntas al JWKS equivocado.
 
 ## ECONNREFUSED al Auth Service
 
@@ -108,13 +108,13 @@ Los logs del `JwtAuthGuard` te dirán si el problema es:
 - Estás usando `localhost` en producción.
 - El Auth Service está abajo.
 
-Probá manualmente: `curl <AUTH_SERVICE_URL>/health` desde el contenedor de tu backend.
+Prueba manualmente: `curl <AUTH_SERVICE_URL>/health` desde el contenedor de tu backend.
 
 ## internalSecret está definido pero recibo 401 igual
 
 **Causa probable:** el secret en tu env no coincide exactamente con el del Auth Service. La comparación es **timing-safe y exacta**, sin trim, sin case-insensitive.
 
-Verificá:
+Verifica:
 
 ```bash
 # En tu backend
@@ -130,15 +130,15 @@ Si los lengths difieren, hay un newline o espacio sobrando.
 
 **Diagnóstico paso a paso:**
 
-1. Decodificá el JWT (jwt.io) y mirá `roles[]`. ¿Está el rol esperado?
-2. ¿El permiso esperado está en el `permisos[]` de ese rol? Si **no** está, le falta el permiso al rol — un admin debe agregárselo con `POST /api/admin/roles/:id/permisos`. El usuario tiene que refrescar el token para verlo.
-3. Si el permiso **sí** está pero igual da 403, el problema es **scope**. Compará el `scope` del JWT contra lo que el endpoint exige. Compartí el JSON de `roles[]` (sin el token completo) con el equipo de plataforma para diagnosticar.
+1. Decodifica el JWT (jwt.io) y mira `roles[]`. ¿Está el rol esperado?
+2. ¿El permiso esperado está en el `permisos[]` de ese rol? Si **no** está, le falta el permiso al rol — un admin debe agregarselo con `POST /api/admin/roles/:id/permisos`. El usuario tiene que refrescar el token para verlo.
+3. Si el permiso **sí** está pero igual da 403, el problema es **scope**. Compara el `scope` del JWT contra lo que el endpoint exige. Comparte el JSON de `roles[]` (sin el token completo) con el equipo de plataforma para diagnosticar.
 
 > Los permisos del JWT son **snapshot al momento de emisión**. Si cambiaron recientemente y el JWT muestra los viejos, el cambio se aplica al próximo refresh o re-login.
 
 ## Cómo usar el campo `trazaId` para soporte
 
-Cuando reportes un problema al equipo de plataforma, **incluí siempre el `trazaId`** que viene en el body de la respuesta de error o en el header `X-Request-Id`. Eso permite correlacionar tu request específico contra los logs del Auth Service en Cloud Logging y diagnosticar en minutos.
+Cuando reportes un problema al equipo de plataforma, **incluye siempre el `trazaId`** que viene en el body de la respuesta de error o en el header `X-Request-Id`. Eso permite correlacionar tu request específico contra los logs del Auth Service en Cloud Logging y diagnosticar en minutos.
 
 ## Vínculos útiles
 

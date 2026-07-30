@@ -28,7 +28,7 @@ gcloud artifacts repositories create hagemsa-npm \
 
 ### 1. Subir la versión
 
-Editá `libs/auth-guard/package.json` y subí el campo `version` siguiendo SemVer
+Edita `libs/auth-guard/package.json` y sube el campo `version` siguiendo SemVer
 (ej. `0.1.0` → `0.1.1` para un fix, `0.2.0` para features compatibles). El
 registry **rechaza** republicar una versión que ya existe.
 
@@ -55,7 +55,7 @@ pnpm config get @hagemsa:registry   # -> undefined
 Consecuencia: `pnpm publish` sale sin credencial y Artifact Registry responde
 **`[E403] The caller does not have permission`**, un mensaje que hace pensar en
 un problema de IAM cuando en realidad el token nunca viajó. Si te pasa,
-comprobá el permiso antes de tocar IAM:
+comprueba el permiso antes de tocar IAM:
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" \
@@ -112,12 +112,12 @@ cd .. && rm -f .npmrc
 ```
 
 :::caution[Ese `.npmrc` de la raíz lleva un token en claro]
-Borralo siempre al terminar. `/.npmrc` está en el `.gitignore` del repo para que
+Bórralo siempre al terminar. `/.npmrc` está en el `.gitignore` del repo para que
 no se pueda commitear por accidente, pero el archivo igual queda en disco.
 
-Y si usás un `trap` para automatizar el borrado, **no lo escribas con `$PWD`**: se
+Y si usas un `trap` para automatizar el borrado, **no lo escribas con `$PWD`**: se
 evalúa al salir, cuando ya hiciste `cd` a otra carpeta, y termina borrando el
-`.npmrc` equivocado. Usá la ruta absoluta.
+`.npmrc` equivocado. Usa la ruta absoluta.
 :::
 
 `--no-git-checks` es necesario porque `pnpm publish` exige por defecto estar en la
@@ -169,7 +169,7 @@ consumidores reciben código viejo (en el pasado esto causó `HTTP 500` por un
 servicio fantasma `permission-resolver` que ya no existía en el source).
 
 El `prepublishOnly` cubre el publish, pero al commitear cambios al source de la
-lib, **recompilá y commiteá el `dist/` también**:
+lib, **recompila y commitea el `dist/` también**:
 
 ```bash
 cd libs/auth-guard
@@ -181,7 +181,7 @@ git add dist
 
 `gcloud auth print-access-token` da un token de corta vida. Si el publish falla
 con `401`, regeneralo (`$env:GOOGLE_NPM_TOKEN = (gcloud auth print-access-token)`)
-y reintentá.
+y reintenta.
 
 ## Costo
 

@@ -9,7 +9,7 @@ Todos estos endpoints requieren JWT con el permiso `auth:role:assign`.
 
 ## GET /api/admin/cuentas/:cuentaId/roles
 
-Lista las asignaciones de rol de una cuenta. Por defecto solo asignaciones **activas** (no revocadas, no expiradas); pasá `?historico=true` para incluir las históricas.
+Lista las asignaciones de rol de una cuenta. Por defecto solo asignaciones **activas** (no revocadas, no expiradas); pasa `?historico=true` para incluir las históricas.
 
 **Query params:**
 
@@ -80,7 +80,7 @@ Asigna un rol a una cuenta con un scope opcional.
 **Notas:**
 
 - `scope` es **JSONB libre**. Convenciones: `{ almacenId: 'lima-1' }`, `{ almacenIds: ['lima-1', 'lima-2'] }` (plural = array), `{}` = sin restricción (global).
-- `expiraEn` es opcional. Si lo pasás, la asignación deja de surtir efecto después de esa fecha (pero permanece en DB para auditoría).
+- `expiraEn` es opcional. Si lo pasas, la asignación deja de surtir efecto después de esa fecha (pero permanece en DB para auditoría).
 - Una cuenta puede tener **múltiples asignaciones del mismo rol** con scopes distintos.
 
 ## PATCH /api/admin/cuentas/:cuentaId/roles/:asignacionId/scope

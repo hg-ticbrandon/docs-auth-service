@@ -33,7 +33,7 @@ domain/
 - Aggregates son inmutables-por-default. Métodos públicos representan invariantes del negocio.
 - Value objects son **completamente inmutables**. Cualquier "modificación" devuelve una nueva instancia.
 - IDs entre aggregates son por **valor** (`CuentaId`), no por instancia (nunca `Cuenta.rol: Rol`).
-- Repositorios son **interfaces** acá; implementaciones viven en `infrastructure/`.
+- Repositorios son **interfaces** aquí; implementaciones viven en `infrastructure/`.
 
 ## application/
 

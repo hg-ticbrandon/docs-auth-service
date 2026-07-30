@@ -85,7 +85,7 @@ Más complicado porque requiere coordinación con todos los backends que lo cons
    NO uses `openssl ... > archivo` ni `echo` para este secreto: dejan un `\n`
    final (en Windows `\r\n`) que, al viajar en el header `X-Internal-Secret`
    (comparado byte-exacto), hace que **todos** los consumidores reciban 401.
-   Verificá: `gcloud secrets versions access latest --secret=internal-shared-secret | xxd | tail -1` no debe terminar en `0d`/`0a`.
+   Verifica: `gcloud secrets versions access latest --secret=internal-shared-secret | xxd | tail -1` no debe terminar en `0d`/`0a`.
    :::
 2. **Coordinar ventana de cambio** con todos los equipos de backends.
 3. **Cada equipo de backend:**
@@ -112,7 +112,7 @@ cantidad de roles/permisos. A partir del flip, cada consumidor resuelve
 `rol → permisos` desde el catálogo del Auth Service (`GET /api/internal/roles-permisos`),
 cacheado. Requiere `@hagemsa/auth-guard` **≥ 0.4.0** en todos los backends.
 
-:::danger[El orden importa: actualizá TODO antes del flip]
+:::danger[El orden importa: actualiza TODO antes del flip]
 El guard de 0.4.0 acepta ambos formatos (gordo y flaco), pero un backend en una
 versión vieja **no sabe** resolver un token flaco: leería `permisos` vacío y
 **denegaría todo (403)**. Por eso el flip del Auth Service es el **último** paso.

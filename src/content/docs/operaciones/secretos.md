@@ -23,7 +23,7 @@ openssl genrsa -out private.pem 2048
 openssl rsa -in private.pem -pubout -out public.pem
 ```
 
-> Borrá `private.pem` y `public.pem` localmente después de subirlos. Nunca commitearlos al repo.
+> Borra `private.pem` y `public.pem` localmente después de subirlos. Nunca commitearlos al repo.
 
 ## 2. Subir a Secret Manager
 
@@ -57,7 +57,7 @@ rm /tmp/dburl.txt
 
 ### Rotar el password de `auth_service`
 
-Si el password de `auth_service` quedó desincronizado con Cloud SQL (típicamente porque cambió en uno pero no en el otro), rotalo y actualizá una nueva versión del secret:
+Si el password de `auth_service` quedó desincronizado con Cloud SQL (típicamente porque cambió en uno pero no en el otro), rótalo y actualiza una nueva versión del secret:
 
 ```bash
 # 1. Generar password URL-safe que cumpla la política (mayúscula + minúscula + número + special)
@@ -99,8 +99,8 @@ openssl rand -hex 32 | tr -d '\n' | \
 `openssl rand -base64 32 > archivo` y `echo "valor" | gcloud ...` agregan un `\n`
 final (en Windows, `\r\n`). Como el valor se manda en un header HTTP y se compara
 byte-exacto, ese newline hace que **ningún backend pueda autenticarse** a
-`/api/internal/*` (la blacklist queda inutilizable). Usá siempre `printf '%s'` o
-`| tr -d '\n'` y verificá con `gcloud secrets versions access latest --secret=internal-shared-secret | xxd | tail -1` que NO termine en `0d`/`0a`.
+`/api/internal/*` (la blacklist queda inutilizable). Usa siempre `printf '%s'` o
+`| tr -d '\n'` y verifica con `gcloud secrets versions access latest --secret=internal-shared-secret | xxd | tail -1` que NO termine en `0d`/`0a`.
 :::
 
 ### Cómo OBTENER el valor (para compartirlo con un backend)

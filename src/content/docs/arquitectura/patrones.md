@@ -97,7 +97,7 @@ export class InMemoryCacheAdapter implements CachePort { /* ... */ }
 constructor(@Inject(CACHE_PORT) private readonly cache: CachePort) {}
 ```
 
-**Ventaja:** podés cambiar la implementación (Redis, Memorystore) sin tocar el dominio.
+**Ventaja:** puedes cambiar la implementación (Redis, Memorystore) sin tocar el dominio.
 
 ## CQRS ligero (use cases explícitos)
 

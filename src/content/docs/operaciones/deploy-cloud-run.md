@@ -20,7 +20,7 @@ El `cloudbuild.yaml` **no** incluye un step de `prisma migrate deploy` porque el
 | Método | Cuándo usar |
 |---|---|
 | `gcloud builds submit` manual desde local | Recomendado para el go-live y mientras el repo no está conectado a GitHub |
-| Cloud Build trigger sobre GitHub | Cuando el repo esté en GitHub y querés CI/CD automático en push a `main` |
+| Cloud Build trigger sobre GitHub | Cuando el repo esté en GitHub y quieres CI/CD automático en push a `main` |
 
 ## Opción A: Build + Deploy manual (recomendado para go-live)
 
@@ -110,9 +110,9 @@ Push a `main` → Cloud Build construye la imagen y la deploya. Ver progreso en 
 
 ## Crear el SUPER_ADMIN inicial
 
-La primera vez no hay ningún usuario. Para crear el primero, usamos el script `scripts/bootstrap-super-admin.ts` (idempotente — podés correrlo dos veces sin problema).
+La primera vez no hay ningún usuario. Para crear el primero, usamos el script `scripts/bootstrap-super-admin.ts` (idempotente — puedes correrlo dos veces sin problema).
 
-### 1. Asegurate que el proxy esté arriba
+### 1. Asegúrate que el proxy esté arriba
 
 Ver [Migrations §2](/operaciones/migrations/#2-levantar-el-proxy). El script corre desde tu máquina contra Cloud SQL vía proxy.
 
@@ -163,7 +163,7 @@ Una vez logueado desde el frontend de admin, ir a perfil → cambiar password y 
 
 ## Gotchas conocidos del Dockerfile
 
-Si modificás el `Dockerfile` y el container deja de arrancar:
+Si modificas el `Dockerfile` y el container deja de arrancar:
 
 | Síntoma en logs de Cloud Run | Causa | Fix |
 |---|---|---|

@@ -5,7 +5,7 @@ description: Decoradores de @hagemsa/auth-guard para controlar acceso por endpoi
 
 Con `JwtAuthGuard` registrado globalmente, **todos los endpoints exigen un JWT válido por default**. Solo los que marques con `@Public()` quedan abiertos.
 
-## Principio: protegé por PERMISO, nunca por ROL
+## Principio: protege por PERMISO, nunca por ROL
 
 Este es el concepto central de RBAC y la regla más importante de esta página:
 
@@ -143,8 +143,8 @@ Comportamiento:
 ## @ServiceOnly / @UserOnly (opt-in, ≥ 0.3.1)
 
 Por default un endpoint acepta **tokens de usuario y de servicio** (M2M) — decide
-por permisos, así el mismo endpoint sirve a personas y a backends. Si querés
-restringir por **tipo de token**, usá estos decoradores opcionales:
+por permisos, así el mismo endpoint sirve a personas y a backends. Si quieres
+restringir por **tipo de token**, usa estos decoradores opcionales:
 
 ```typescript
 import { ServiceOnly, UserOnly } from '@hagemsa/auth-guard';
