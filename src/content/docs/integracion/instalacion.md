@@ -225,10 +225,29 @@ Cambios **aditivos y retrocompatibles**:
 - El guard acepta **ambos formatos** (gordo y flaco). Con tokens gordos —los
   actuales— sigue autorizando sin round-trip; nada cambia hasta que el Auth Service
   active `JWT_EMBED_PERMISOS=false`.
-- **No hay cambios de código**: los decoradores (`@RequirePermission`, `@RequireScope`,
-  `@CurrentUser`) y el shape de `AuthContext` no cambian.
-- Para resolver tokens flacos hace falta `authServiceUrl` (ya requerido si usás
-  `enableBlacklistCheck`) y, si el Auth Service exige el secreto, `internalSecret`.
+- **Tus endpoints no cambian**: los decoradores (`@RequirePermission`, `@RequireScope`,
+  `@CurrentUser`) y el shape de `AuthContext` siguen igual. El único ajuste es de
+  configuración (el punto siguiente).
+- **Definí estas dos variables** — sin ellas el guard no puede resolver un token
+  flaco y responde **500**:
+
+  ```bash
+  AUTH_SERVICE_URL=https://auth.hagemsa.com   # base del Auth Service
+  AUTH_INTERNAL_SECRET=<shared-secret>        # header X-Internal-Secret
+  ```
+
+  Y mapealas en el `forRoot` (los nombres de las env son tuyos, los del config no):
+
+  ```typescript
+  AuthGuardModule.forRoot({
+    // ...jwksUrl, issuer, audience
+    authServiceUrl: process.env.AUTH_SERVICE_URL,
+    internalSecret: process.env.AUTH_INTERNAL_SECRET,
+  }),
+  ```
+
+  Si ya usabas `enableBlacklistCheck`, ya las tenías: son las mismas. Ojo, hay que
+  definirlas **también en el deploy** (Cloud Run), no alcanza con el código.
 - **Orden de despliegue:** actualizá a `^0.4.0` en TODOS los backends **antes** de
   que el Auth Service pase a emitir tokens flacos. Ver
   [Configuración → Con tokens flacos](/integracion/configuracion/#con-tokens-flacos).
