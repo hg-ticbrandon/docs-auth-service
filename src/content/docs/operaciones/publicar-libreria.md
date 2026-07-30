@@ -42,19 +42,32 @@ registry **rechaza** republicar una versión que ya existe.
 //us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:always-auth=true
 ```
 
-:::note[Acá SÍ va el `_authToken` en el `.npmrc` del proyecto — no lo "corrijas"]
-Puede chocar con lo que dice
-[Instalación](/integracion/instalacion/#11-configurar-el-registry-en-tu-proyecto), donde
-el token va **obligatoriamente** al `~/.npmrc` de usuario. La diferencia es la
-herramienta:
+:::danger[pnpm NO lee este archivo — es la causa de los 403 al publicar]
+Este repo es un workspace de pnpm, y **pnpm resuelve el `.npmrc` desde la raíz del
+workspace y desde el de usuario, no desde la carpeta del paquete**. O sea que
+`libs/auth-guard/.npmrc` queda ignorado por completo. Se comprueba en un segundo,
+parado dentro de `libs/auth-guard`:
 
-- **Publicar** usa **`npm publish`** (ver el gotcha de abajo). **npm sí expande**
-  `${GOOGLE_NPM_TOKEN}` desde el `.npmrc` del proyecto → este flujo funciona.
-- **Instalar** en los backends consumidores usa **`pnpm`**, y **pnpm 11.11+ ignora**
-  credenciales del `.npmrc` del proyecto → allí el token debe ir al de usuario.
+```bash
+pnpm config get @hagemsa:registry   # -> undefined
+```
 
-Por eso este archivo se queda como está. Si algún día el publish pasa a pnpm, hay que
-mover el token al `~/.npmrc`.
+Consecuencia: `pnpm publish` sale sin credencial y Artifact Registry responde
+**`[E403] The caller does not have permission`**, un mensaje que hace pensar en
+un problema de IAM cuando en realidad el token nunca viajó. Si te pasa,
+comprobá el permiso antes de tocar IAM:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  "https://us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/@hagemsa%2fauth-guard"
+```
+
+Un `200` significa que la credencial y el permiso están bien y el problema es de
+configuración, no de IAM.
+
+`npm` sí expande `${GOOGLE_NPM_TOKEN}` desde el `.npmrc` del paquete, así que el
+archivo se queda como está: sirve para el flujo con `npm publish`.
 :::
 
 ### 3. Publicar
@@ -62,7 +75,8 @@ mover el token al `~/.npmrc`.
 El `prepublishOnly` del `package.json` corre `pnpm build` automáticamente antes
 de empaquetar, así que el `dist/` publicado siempre refleja el source actual.
 
-Forma recomendada — empaquetar con pnpm y subir con npm (ver el gotcha de abajo):
+Forma recomendada — empaquetar con pnpm y subir con npm, que sí lee el `.npmrc`
+del paquete:
 
 ```powershell
 cd libs/auth-guard
@@ -78,7 +92,36 @@ pnpm pack
 npm publish *.tgz
 ```
 
-Quien publica necesita `roles/artifactregistry.writer` sobre el repo.
+Quien publica necesita `roles/artifactregistry.writer` sobre el repo (o `owner`,
+que lo incluye).
+
+#### Alternativa: `pnpm publish` con el `.npmrc` en la raíz
+
+`pnpm publish` **funciona**, siempre que la credencial esté donde pnpm la busca.
+Así se publicó la 0.5.0 el 2026-07-30:
+
+```bash
+# Desde la RAIZ del repo, no desde libs/auth-guard
+T="$(gcloud auth print-access-token)"
+printf '@hagemsa:registry=https://us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/\n//us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken=%s\n' "$T" > .npmrc
+
+cd libs/auth-guard && pnpm publish --no-git-checks
+
+# Borrar el .npmrc de la raiz SIEMPRE, lleva el token en claro
+cd .. && rm -f .npmrc
+```
+
+:::caution[Ese `.npmrc` de la raíz lleva un token en claro]
+Borralo siempre al terminar. `/.npmrc` está en el `.gitignore` del repo para que
+no se pueda commitear por accidente, pero el archivo igual queda en disco.
+
+Y si usás un `trap` para automatizar el borrado, **no lo escribas con `$PWD`**: se
+evalúa al salir, cuando ya hiciste `cd` a otra carpeta, y termina borrando el
+`.npmrc` equivocado. Usá la ruta absoluta.
+:::
+
+`--no-git-checks` es necesario porque `pnpm publish` exige por defecto estar en la
+rama principal con el árbol limpio.
 
 ### 4. Verificar
 
@@ -92,15 +135,21 @@ gcloud artifacts versions list \
 
 ## Gotchas (leer antes de publicar)
 
-### `pnpm publish` no funciona contra Artifact Registry — usar `pnpm pack && npm publish`
+### El fallo de `pnpm publish` es de configuración, no del registry
+
+Esta sección decía que `pnpm publish` era incompatible con Artifact Registry. **No
+es así**: la 0.5.0 se publicó con `pnpm publish` el 2026-07-30. Lo que falla es
+*dónde* busca pnpm la credencial — ver el aviso de la sección 2. Si el `.npmrc`
+está solo en `libs/auth-guard/`, pnpm no lo lee, publica sin token y el registry
+devuelve `403`.
+
+Se deja `pnpm pack && npm publish *.tgz` como forma recomendada igual, porque no
+obliga a dejar un token en claro en la raíz del repo. Pero si ves un `403`, no
+busques el problema en IAM ni asumas que la herramienta no sirve.
 
 Desde **pnpm v11**, `pnpm publish` está implementado de forma nativa y ya no
-delega en el CLI de `npm` ([doc oficial](https://pnpm.io/cli/publish)). Esa
-implementación nativa falla la autenticación contra GCP Artifact Registry con
-`[E401] need: Basic realm=...`, aun con el token correcto en el `.npmrc` (no arma
-bien el Basic auth para registries con path).
-
-La misma doc de pnpm documenta el workaround: **`pnpm pack && npm publish *.tgz`**.
+delega en el CLI de `npm` ([doc oficial](https://pnpm.io/cli/publish)), que es de
+donde venía la sospecha original.
 `pnpm pack` arma el tarball (corre `prepublishOnly`, respeta `files`, y reescribe
 cualquier dependencia con protocolo `workspace:` a su versión real), y `npm publish`
 —que sí autentica bien con el `.npmrc` (token Bearer)— solo lo sube.
