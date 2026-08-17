@@ -41,7 +41,7 @@ Responses son siempre `application/json` (excepto `/health`, que también es JSO
 - **Claves JSON en español sin tildes ni ñ** (ej. `paginacion`, `tamanoPagina`, `razonSocial`). Esto evita problemas con generadores de tipos y herramientas que asumen ASCII.
 - El **contenido** de los campos sí va en español natural con tildes y ñ (ej. `"detalle": "Cuenta suspendida"`, `"razonSocial": "ACME SAC"`).
 - `codigo` es el **identificador estable** que el frontend usa para lógica condicional. Una vez publicado, **nunca cambia**.
-- `trazaId` se pobla desde el contexto de tracing distribuido (header `X-Request-Id` si viene en el request; si no, se genera). Es **obligatorio** en toda respuesta de error.
+- `trazaId` es el id de correlación de la request. Es **obligatorio** en toda respuesta de error. Que el campo exista no implica que correlacione entre servicios: eso depende de que tu backend propague el header. Ver [Correlation ID](#correlation-id) más abajo.
 - Errores 5xx **NUNCA** exponen stack traces, nombres de tablas, ni mensajes internos. Esa información va **solo a logs**.
 - Lista vacía retorna **`200`** con `datos: []`. **NUNCA** `404` ni `null` cuando la consulta es válida pero sin resultados.
 
@@ -213,7 +213,24 @@ Hay un límite global de **60 requests por minuto por IP** en cualquier endpoint
 
 ## Correlation ID
 
-Cada request tiene un `X-Request-Id`. Si lo mandas en el header, el Auth Service lo respeta y lo devuelve en la response (útil para tracing distribuido). Si no, se genera uno. El mismo valor aparece como `trazaId` en el body de cualquier respuesta de error.
+Cada request tiene un id de correlación. El Auth Service lo resuelve así, en orden:
+
+1. **El header `X-Request-Id`**, si lo mandas y tiene un formato aceptable (entre 8 y 128 caracteres alfanuméricos, guiones, guiones bajos y dos puntos). Se valida porque ese valor termina escrito en los logs y en respuestas HTTP.
+2. **El header `X-Cloud-Trace-Context`**, que Cloud Run pone en toda request entrante. Este es el que hace que haya correlación incluso cuando el llamador no manda nada.
+3. Si no hay ninguno, se genera un UUID.
+
+El valor resuelto se devuelve en el header `X-Request-Id` de la response y aparece como `trazaId` en el body de cualquier respuesta de error.
+
+:::caution[Que tu servicio reciba un `trazaId` no significa que haya correlación]
+Este endpoint te devuelve un id siempre, pero **si tu servicio no propaga el header, ese id no conecta nada más allá del Auth Service**. La cadena se corta en tu salto:
+
+- Los logs de **tu** servicio no van a tener ese id, salvo que lo escribas.
+- Una acción del usuario que pasa por el frontend, por tu backend y por el Auth Service va a producir **tres ids distintos**, y no hay forma de saber que eran la misma acción.
+
+Verificado el 2026-08-17: los cinco backends `bc*` declaran `trazaId` en su contrato de errores y **ninguno propagaba el header**. El campo existía en todos y no correlacionaba nada.
+
+Lo que le toca a tu servicio está en [Correlacionar logs entre servicios](/integracion/correlacion-logs/).
+:::
 
 ## Idioma
 

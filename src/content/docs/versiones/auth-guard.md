@@ -26,11 +26,43 @@ pero se publicó el 2026-07-02.
 | [0.2.0](#020) | 2026-07-02 | Vínculo con el socio de negocio de BC01 en el contexto | No |
 | [0.1.0](#010) | 2026-05-29 | Primera versión: guard JWT, decoradores, JWKS, blacklist | — |
 
-:::tip[La 0.5.0 es la versión `latest`]
-Está publicada y es la que instala un `pnpm add @hagemsa/auth-guard` sin versión.
-Los backends que ya tienen `^0.4.0` **no la reciben solos**: en SemVer `0.x` el
-caret no cruza minors, así que `^0.4.0` significa `>=0.4.0 <0.5.0`. Para pasar a
-la 0.5.0 hay que pedirla explícitamente.
+:::danger[Los cinco backends `bc*` están en 0.4.0, sin las correcciones de la 0.5.0]
+Medido el 2026-08-17 contra los servicios desplegados: `bc01-socio-negocio`,
+`bc02-activos`, `bc03-comercial`, `bc04-flota` y
+`bc14-cs-configuracion-general` corren **0.4.0**. La 0.5.0 se publicó el
+**2026-07-30** y no la adoptó nadie.
+
+Eso no es solo estar atrasado: la 0.5.0 es **endurecimiento de seguridad**. Un
+backend en 0.4.0 sigue teniendo la amplificación de peticiones de JWKS —donde
+cualquier anónimo elige el `kid` y fuerza un fetch al Auth Service por request—,
+sigue devolviendo 500 cuando el JWKS está inalcanzable, y su cache de blacklist
+sigue creciendo sin límite.
+
+**Actualizar no requiere tocar código** (ver más abajo). Es subir la dependencia y
+redesplegar.
+
+Para ver en qué versión estás realmente, con el lockfile como fuente y no el
+`package.json`:
+
+```bash
+pnpm why @hagemsa/auth-guard --depth 0
+```
+:::
+
+:::tip[Por qué nadie se actualiza solo]
+La 0.5.0 es la versión `latest`: es la que instala un `pnpm add @hagemsa/auth-guard`
+sin versión. Pero los backends que ya tienen `^0.4.0` **no la reciben**: en SemVer
+`0.x` el caret no cruza minors, así que `^0.4.0` significa `>=0.4.0 <0.5.0`. Hay que
+pedirla explícitamente:
+
+```bash
+pnpm add @hagemsa/auth-guard@^0.5.0
+```
+
+Y los `Dockerfile` usan `--frozen-lockfile`, así que la versión cambia cuando alguien
+la sube a mano y commitea el lockfile, no cuando se despliega. Publicar una versión
+nueva **no afecta a nadie** hasta ese momento — que es la razón por la que la 0.5.0
+lleva semanas sin adoptarse sin que nada se rompa.
 :::
 
 Para ver qué hay publicado realmente:

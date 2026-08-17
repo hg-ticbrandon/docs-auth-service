@@ -138,7 +138,15 @@ Si los lengths difieren, hay un newline o espacio sobrando.
 
 ## Cómo usar el campo `trazaId` para soporte
 
-Cuando reportes un problema al equipo de plataforma, **incluye siempre el `trazaId`** que viene en el body de la respuesta de error o en el header `X-Request-Id`. Eso permite correlacionar tu request específico contra los logs del Auth Service en Cloud Logging y diagnosticar en minutos.
+Cuando reportes un problema al equipo de plataforma, **incluye siempre el `trazaId`** que viene en el body de la respuesta de error o en el header `X-Request-Id`. Con eso se ubica tu request específico en los logs del Auth Service en Cloud Logging.
+
+:::caution[Alcanza para el Auth Service, no para la cadena completa]
+Ese id ubica la request **en los logs del Auth Service**. Para que sirva también en los tuyos —y para poder seguir una acción del usuario a través de varios servicios— tu backend tiene que leer el header entrante, escribirlo en sus propios logs y propagarlo en sus llamadas salientes.
+
+Si no lo hace, cada servicio genera su propio id y el `trazaId` que reportas solo abre una ventana al último salto. Los cinco backends `bc*` estaban en esa situación al 2026-08-17.
+
+Lo que hay que implementar está en [Correlacionar logs entre servicios](/integracion/correlacion-logs/).
+:::
 
 ## Vínculos útiles
 
