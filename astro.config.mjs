@@ -44,6 +44,10 @@ export default defineConfig({
             { label: 'Desplegar a Cloud Run', slug: 'integracion/deploy-consumidor' },
             { label: 'Correlacionar logs entre servicios', slug: 'integracion/correlacion-logs' },
             { label: 'Errores comunes', slug: 'integracion/errores-comunes' },
+            {
+              label: 'Estándar de implementación',
+              slug: 'integracion/estandar-backend',
+            },
           ],
         },
         {

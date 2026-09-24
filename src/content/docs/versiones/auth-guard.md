@@ -19,6 +19,7 @@ pero se publicó el 2026-07-02.
 
 | Versión | Publicada | Qué trae | ¿Rompe algo? |
 | --- | --- | --- | --- |
+| [0.6.0](#060) | 2026-09-24 | Claim `socioCuentas`: cuentas y contratos del socio en el token | No |
 | [0.5.0](#050) | 2026-07-30 | Endurecimiento: amplificación de JWKS, 500→401, cache acotado | No |
 | [0.4.0](#040) | 2026-07-24 | Tokens "flacos": resuelve `rol → permisos` del catálogo | No, pero ordena el despliegue |
 | [0.3.1](#031) | 2026-07-10 | Corrige tipos de `AuthContext` que rompieron en 0.3.0 | No, arregla |
@@ -26,13 +27,27 @@ pero se publicó el 2026-07-02.
 | [0.2.0](#020) | 2026-07-02 | Vínculo con el socio de negocio de BC01 en el contexto | No |
 | [0.1.0](#010) | 2026-05-29 | Primera versión: guard JWT, decoradores, JWKS, blacklist | — |
 
-:::danger[Los cinco backends `bc*` están en 0.4.0, sin las correcciones de la 0.5.0]
-Medido el 2026-08-17 contra los servicios desplegados: `bc01-socio-negocio`,
-`bc02-activos`, `bc03-comercial`, `bc04-flota` y
-`bc14-cs-configuracion-general` corren **0.4.0**. La 0.5.0 se publicó el
-**2026-07-30** y no la adoptó nadie.
+:::danger[Casi todos los backends siguen en 0.4.0, sin las correcciones de la 0.5.0]
+Medido el **2026-09-24** leyendo el `package.json` de cada repositorio:
 
-Eso no es solo estar atrasado: la 0.5.0 es **endurecimiento de seguridad**. Un
+| Backend | Versión | Estado |
+| --- | --- | --- |
+| `bc03-comercial` | **0.6.0** | Al día. Actualizado y desplegado el 2026-09-24. |
+| `bc-06` operaciones | 0.4.0 | Le faltan las correcciones de la 0.5.0. |
+| `bc14-cs-configuracion-general` | 0.4.0 | Le faltan las correcciones de la 0.5.0. |
+| `bc04-flota` | — | No depende de `auth-guard`. |
+| `hg-evaluaciones-bk` | — | No depende de `auth-guard`, y no tiene `.npmrc`. |
+
+`bc01-socio-negocio` y `bc02-activos` no están en esta medición porque sus
+repositorios no estaban disponibles al medir. Su última lectura conocida es la
+del 2026-08-17, que los ubicaba en 0.4.0.
+
+Que un backend no dependa de `auth-guard` no es de por sí un problema —puede ser
+un servicio interno sin HTTP expuesto al usuario— pero hay que confirmarlo caso
+por caso antes de darlo por bueno.
+
+Estar en 0.4.0 no es solo estar atrasado: la 0.5.0 es **endurecimiento de
+seguridad**. Un
 backend en 0.4.0 sigue teniendo la amplificación de peticiones de JWKS —donde
 cualquier anónimo elige el `kid` y fuerza un fetch al Auth Service por request—,
 sigue devolviendo 500 cuando el JWKS está inalcanzable, y su cache de blacklist
@@ -71,6 +86,92 @@ Para ver qué hay publicado realmente:
 gcloud artifacts versions list --package=@hagemsa%2fauth-guard \
   --repository=hagemsa-npm --location=us-central1
 ```
+
+## 0.6.0
+
+**2026-09-24** · Las cuentas y contratos del socio de negocio viajan en el token.
+
+**¿Hay que hacer algo?** No. El claim es opcional y aditivo: ninguna firma
+pública cambió y un consumidor en 0.5.0 —o en 0.4.0— sigue funcionando igual,
+simplemente ignora el campo nuevo. No hay orden obligatorio entre backends.
+
+Lo único que cambia si actualizás es que `@CurrentUser()` expone un campo más.
+
+### Agregado
+
+**`socioCuentas` en `JwtPayload` y en `AuthContext`.** La lista de cuentas y
+contratos que el socio de negocio de esa cuenta tiene asignados en BC-01:
+
+```ts
+socioCuentas?: readonly SocioCuentaJwt[]
+
+interface SocioCuentaJwt {
+  readonly codigo: string   // 'CTA-001'
+  readonly nombre: string   // 'CERRO VERDE'
+  readonly tipo: string     // 'CUENTA' | 'CONTRATO'
+}
+```
+
+Sirve para filtrar por cuenta sin llamar a BC-01. El caso que lo motivó: al
+programar un viaje, mostrar solo las opciones de costo de ruta que corresponden
+al usuario autenticado.
+
+**`SocioCuentaJwt`** se exporta desde el índice del paquete, para poder anotar
+código del consumidor:
+
+```ts
+import type { SocioCuentaJwt } from '@hagemsa/auth-guard'
+```
+
+### Cómo se usa
+
+```ts
+@Get('opciones-costo')
+@RequirePermission('bc06:viaje:leer')
+async opciones(@CurrentUser() user: AuthContext) {
+  const codigos = (user.socioCuentas ?? []).map((c) => c.codigo)
+  // codigos: ['CTA-001']
+}
+```
+
+### Tres cosas que hay que saber antes de usarlo
+
+**El claim no viaja si no hay cuentas.** No llega como lista vacía: directamente
+no está. Entonces `socioCuentas === undefined` es el único caso de "sin cuentas",
+y hay que decidir qué hacer con él. Medido en producción el 2026-09-24: de los
+cinco vínculos que existen, **solo uno** tiene cuenta asignada. Si filtrás por
+este claim sin resolver ese caso, cuatro de cada cinco usuarios no ven nada.
+
+**Tampoco viaja si la cuenta no tiene socio vinculado.** Un usuario del ERP sin
+socio de BC-01 nunca lo trae.
+
+**Es una foto, no el estado vivo.** Sale del snapshot que el Auth Service guardó
+cuando se vinculó el socio, igual que `socioNombre` y `socioDocumento`. Si en
+BC-01 le cambian las cuentas a alguien, su token sigue con las viejas hasta que
+un administrador vuelva a vincular ese socio desde la ficha de la cuenta. Si
+necesitás el estado actual, el token no alcanza: hay que consultarle a BC-01.
+
+### `tipo` es dato de display, nunca de autorización
+
+Distingue una CUENTA de un CONTRATO para poder mostrarlo o agrupar. **No** se
+usa —ni debe usarse— para decidir si alguien puede hacer algo. Para eso están los
+permisos y los scopes de los roles, que es lo único que el guard evalúa.
+
+### Trampa conocida
+
+Con `^0.5.0` o `^0.4.0` en tu `package.json` **no te llega**: el caret no cruza
+minors en `0.x`. Hay que pedirla explícita:
+
+```json
+"@hagemsa/auth-guard": "0.6.0"
+```
+
+### Nota sobre la publicación
+
+Se publicó con `npm publish`. `pnpm publish` había fallado con **403 Forbidden**,
+que parece un problema de permisos y no lo es: pnpm no lee el `.npmrc` de
+`libs/auth-guard/`, así que sale sin credencial. La causa y las dos salidas están
+en [Publicar auth-guard](/operaciones/publicar-libreria/).
 
 ## 0.5.0
 
