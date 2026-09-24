@@ -95,7 +95,7 @@ gcloud artifacts versions list --package=@hagemsa%2fauth-guard \
 pública cambió y un consumidor en 0.5.0 —o en 0.4.0— sigue funcionando igual,
 simplemente ignora el campo nuevo. No hay orden obligatorio entre backends.
 
-Lo único que cambia si actualizás es que `@CurrentUser()` expone un campo más.
+Lo único que cambia al actualizar es que `@CurrentUser()` expone un campo más.
 
 ### Agregado
 
@@ -139,7 +139,7 @@ async opciones(@CurrentUser() user: AuthContext) {
 **El claim no viaja si no hay cuentas.** No llega como lista vacía: directamente
 no está. Entonces `socioCuentas === undefined` es el único caso de "sin cuentas",
 y hay que decidir qué hacer con él. Medido en producción el 2026-09-24: de los
-cinco vínculos que existen, **solo uno** tiene cuenta asignada. Si filtrás por
+cinco vínculos que existen, **solo uno** tiene cuenta asignada. Si se filtra por
 este claim sin resolver ese caso, cuatro de cada cinco usuarios no ven nada.
 
 **Tampoco viaja si la cuenta no tiene socio vinculado.** Un usuario del ERP sin
@@ -149,7 +149,7 @@ socio de BC-01 nunca lo trae.
 cuando se vinculó el socio, igual que `socioNombre` y `socioDocumento`. Si en
 BC-01 le cambian las cuentas a alguien, su token sigue con las viejas hasta que
 un administrador vuelva a vincular ese socio desde la ficha de la cuenta. Si
-necesitás el estado actual, el token no alcanza: hay que consultarle a BC-01.
+se necesita el estado actual, el token no alcanza: hay que consultarle a BC-01.
 
 ### `tipo` es dato de display, nunca de autorización
 
@@ -159,7 +159,7 @@ permisos y los scopes de los roles, que es lo único que el guard evalúa.
 
 ### Trampa conocida
 
-Con `^0.5.0` o `^0.4.0` en tu `package.json` **no te llega**: el caret no cruza
+Con `^0.5.0` o `^0.4.0` en el `package.json` **no llega**: el caret no cruza
 minors en `0.x`. Hay que pedirla explícita:
 
 ```json
