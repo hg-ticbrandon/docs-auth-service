@@ -107,23 +107,179 @@ Un endpoint que exige JWT pero no exige permiso deja entrar a **cualquier usuari
 autenticado del ERP**, sin importar su rol. Es el hueco más fácil de dejar, porque
 el endpoint "funciona" en las pruebas: quien prueba está logueado.
 
-La regla: **todo endpoint tiene `@RequirePermission`, salvo los `@Public()`**.
+La regla: **todo endpoint exige un permiso, salvo los `@Public()` de la regla 2.**
 
-```bash
-# Lista los controladores donde hay menos permisos que endpoints.
-# Los unicos que deben aparecer son los que tienen @Public().
-for f in $(find src -name "*.controller.ts" -not -name "*.spec.ts" | sort); do
-  eps=$(grep -cE "^\s*@(Get|Post|Put|Patch|Delete)\(" "$f")
-  perms=$(grep -c "@RequirePermission" "$f")
-  pub=$(grep -c "@Public()" "$f")
-  if [ "$eps" -gt 0 ] && [ "$perms" -lt "$eps" ]; then
-    echo "$f  endpoints=$eps permisos=$perms publicos=$pub"
-  fi
-done
+### El permiso puede estar en el método o en el controlador
+
+Las dos formas cumplen, porque el guard resuelve así:
+
+```ts
+this.reflector.getAllAndOverride(REQUIRE_PERMISSION_KEY, [
+  context.getHandler(),  // el método
+  context.getClass(),    // el controlador
+])
 ```
 
-En `bc03-comercial` esto devuelve exactamente tres controladores, y los tres son
-los públicos de la regla 2. Ese es el resultado esperado.
+Un `@RequirePermission` sobre el `@Controller` aplica a **todos** sus endpoints, y
+el del método lo sobreescribe. Lo mismo vale para `@Public()`, como ya se ve en el
+ejemplo del push de Pub/Sub de la regla 2.
+
+Los dos backends auditados usan patrones distintos y los dos cumplen:
+
+| Backend | Patrón |
+| --- | --- |
+| `bc03-comercial` | Permiso explícito en cada método: 170 endpoints, 165 con decorador propio, 5 públicos. |
+| `bc14-cs-configuracion-general` | `@RequirePermission(leer)` sobre el `@Controller` como piso; los 60 endpoints que escriben lo sobreescriben y 49 de lectura lo heredan. |
+
+:::caution[Contar decoradores por archivo NO sirve para auditar esto]
+Comparar la cantidad de `@RequirePermission` contra la cantidad de endpoints
+parece razonable y está mal en las dos direcciones.
+
+**Falsos positivos:** contra BC-14 reporta 49 endpoints "desprotegidos" que en
+realidad heredan el permiso del controlador. Esa cuenta motivó un reporte
+equivocado de 50 endpoints abiertos en BC-14 el 2026-09-24.
+
+**Falsos negativos:** no ve el único caso que importaba, que es un endpoint de
+escritura heredando un permiso de lectura.
+
+Hay que resolver el permiso efectivo de cada endpoint, no contar líneas.
+:::
+
+### El script
+
+```bash
+cat > /tmp/auditar-permisos.mjs <<'EOF'
+// Audita los controladores de un backend del ERP: para cada endpoint dice que
+// permiso EFECTIVO exige.
+//
+// Por que no alcanza con contar @RequirePermission por archivo: el guard
+// resuelve con getAllAndOverride(KEY, [handler, class]), asi que @Public() y
+// @RequirePermission puestos sobre el @Controller valen para TODOS sus
+// endpoints, y el del metodo sobreescribe al de la clase. Contar da falsos
+// positivos (reporta como huecos endpoints que heredan) y falsos negativos (no
+// ve una escritura protegida con un permiso de lectura).
+import { readFileSync } from 'node:fs'
+import { execSync } from 'node:child_process'
+
+const ES_VERBO = /^@(Get|Post|Put|Patch|Delete)\(/
+const PERMISO = /@RequirePermission\(\s*([^)]*)\)/
+
+// Excluye los specs por RUTA, no por nombre: `grep -v spec` tambien filtra
+// "prospecto" y deja controladores afuera sin avisar.
+const archivos = execSync(
+  `find src -name "*.controller.ts" -not -name "*.spec.ts" | sort`,
+  { encoding: 'utf8' },
+).split('\n').filter(Boolean)
+
+const totales = { endpoints: 0, propios: 0, heredados: 0, publicos: 0, sinNinguno: 0 }
+const huecos = []
+const escrituraConLectura = []
+
+for (const archivo of archivos) {
+  const lineas = readFileSync(archivo, 'utf8').split(/\r?\n/)
+  const t = (i) => (lineas[i] ?? '').trim()
+
+  // Decoradores de la CLASE: se sube desde `export class` hasta el final de la
+  // declaracion anterior (`}` o `;`). Solo cuentan las lineas que son
+  // decoradores; las de comentario se atraviesan pero no se leen, para que un
+  // @RequirePermission mencionado en un comentario no se tome por real.
+  let permisoDeClase = null
+  let claseEsPublica = false
+  const iClase = lineas.findIndex((l) => /^\s*export class /.test(l))
+  for (let j = iClase - 1; j >= 0; j--) {
+    const linea = t(j)
+    if (linea.endsWith('}') || linea.endsWith(';')) break
+    if (!linea.startsWith('@')) continue
+    if (linea.startsWith('@Public()')) claseEsPublica = true
+    const m = PERMISO.exec(linea)
+    if (m) permisoDeClase = m[1].trim()
+  }
+
+  for (let i = 0; i < lineas.length; i++) {
+    if (!ES_VERBO.test(t(i))) continue
+    totales.endpoints++
+
+    // Bloque de decoradores del metodo: arriba y abajo del verbo, mientras
+    // sigan siendo decoradores.
+    let desde = i
+    while (desde > 0 && t(desde - 1).startsWith('@')) desde--
+    let hasta = i
+    while (hasta < lineas.length - 1 && t(hasta + 1).startsWith('@')) hasta++
+    const bloque = lineas.slice(desde, hasta + 1).join('\n')
+
+    if (claseEsPublica || bloque.includes('@Public()')) { totales.publicos++; continue }
+
+    const verbo = ES_VERBO.exec(t(i))[1]
+    const donde = `${archivo}:${i + 1}  ${t(i)}`
+
+    if (PERMISO.test(bloque)) { totales.propios++; continue }
+    if (!permisoDeClase) { totales.sinNinguno++; huecos.push(donde); continue }
+
+    totales.heredados++
+    // Hereda del controlador. No esta desprotegido, pero si el permiso heredado
+    // es de lectura y el endpoint escribe, exige menos de lo que deberia.
+    if (verbo !== 'Get' && /leer|read|consultar/i.test(permisoDeClase)) {
+      escrituraConLectura.push(`${donde}  [${verbo}] -> ${permisoDeClase}`)
+    }
+  }
+}
+
+console.log(`controladores: ${archivos.length} | endpoints: ${totales.endpoints}`)
+console.log(`  permiso propio:           ${totales.propios}`)
+console.log(`  heredan del controlador:  ${totales.heredados}`)
+console.log(`  @Public():                ${totales.publicos}`)
+console.log(`  SIN NINGUN PERMISO:       ${totales.sinNinguno}`)
+
+if (huecos.length) {
+  console.log('\n--- SIN PERMISO: entra cualquier usuario autenticado ---')
+  for (const x of huecos) console.log('  ' + x)
+}
+if (escrituraConLectura.length) {
+  console.log('\n--- ESCRITURAS que heredan un permiso de LECTURA ---')
+  for (const x of escrituraConLectura) console.log('  ' + x)
+}
+if (!huecos.length && !escrituraConLectura.length) console.log('\nSin hallazgos.')
+EOF
+
+node /tmp/auditar-permisos.mjs
+```
+
+El resultado esperado es `SIN NINGUN PERMISO: 0` y ninguna escritura con permiso
+de lectura. Medido el 2026-09-24:
+
+```
+=== bc03-comercial ===
+controladores: 19 | endpoints: 170
+  permiso propio:           165
+  heredan del controlador:  0
+  @Public():                5
+  SIN NINGUN PERMISO:       0
+
+Sin hallazgos.
+
+=== bc14-cs-configuracion-general ===
+controladores: 2 | endpoints: 111
+  permiso propio:           60
+  heredan del controlador:  49
+  @Public():                2
+  SIN NINGUN PERMISO:       0
+
+Sin hallazgos.
+```
+
+### El hallazgo que solo aparece resolviendo el permiso efectivo
+
+En BC-14, `@Patch('sedes/:sedeId/areas/:areaId/plazas')` no declaraba permiso
+propio, así que heredaba `bc14:hu001:leer` del controlador: quien pudiera **leer**
+la configuración general podía **modificar** las plazas autorizadas de un área. Su
+gemelo de cargos, `@Put('sedes/:sedeId/cargos/:cargoId/plazas')`, sí exigía
+`modificar`. Corregido el 2026-09-24.
+
+Ese es el riesgo propio del patrón de BC-14: el piso del controlador es una red
+contra el olvido, pero convierte el olvido en un permiso silenciosamente
+insuficiente, en vez de en un 403 evidente. Con el patrón de BC-03 el olvido deja
+el endpoint abierto —más grave, pero también más visible—. Ninguno de los dos se
+detecta leyendo el archivo.
 
 ---
 
