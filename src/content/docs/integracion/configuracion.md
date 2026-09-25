@@ -28,7 +28,11 @@ import { AUTH_DEFAULTS } from './shared/auth.defaults';
   providers: [
     // Aplicar el guard globalmente (todos los endpoints exigen JWT por default,
     // salvo los marcados con @Public).
-    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    //
+    // `useExisting` y no `useClass`: con useClass el enhancer construye su
+    // PROPIA instancia y overrideProvider(JwtAuthGuard) no la alcanza, asi que
+    // un test no puede sustituirlo por un stub. Ver la regla 1 del estandar.
+    { provide: APP_GUARD, useExisting: JwtAuthGuard },
   ],
 })
 export class AppModule {}

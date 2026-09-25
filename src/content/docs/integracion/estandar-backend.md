@@ -35,24 +35,54 @@ página salen de auditarlo el 2026-09-24.
 marca con `@Public()`. Nunca al revés: proteger endpoint por endpoint deja huecos
 por olvido, y el olvido no se ve en code review.
 
-Se registra como `APP_GUARD` en el módulo raíz:
+Se registra como `APP_GUARD` en el módulo raíz, con **`useExisting`**:
 
 ```ts
 import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from '@hagemsa/auth-guard';
 
 @Module({
-  providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
+  providers: [{ provide: APP_GUARD, useExisting: JwtAuthGuard }],
 })
 export class AppModule {}
 ```
+
+:::danger[`useExisting`, no `useClass`]
+Los dos protegen igual en producción. La diferencia aparece en los tests.
+
+Con `useClass`, Nest construye una instancia **propia** del guard bajo el token
+`APP_GUARD`, sin resolver el proveedor `JwtAuthGuard`. Entonces esto **no surte
+efecto**:
+
+```ts
+Test.createTestingModule({ imports: [AppModule] })
+  .overrideProvider(JwtAuthGuard)
+  .useClass(StubJwtAuthGuard)   // el enhancer sigue usando el guard real
+  .compile();
+```
+
+El stub queda registrado, pero el guard real sigue corriendo: se superponen los
+dos y **todo responde 401**. En `bc03-comercial` eso hizo fallar 24 pruebas de
+contratos hasta dar con la causa. Se probaron las tres variantes
+(`overrideProvider(JwtAuthGuard)`, `overrideProvider(APP_GUARD)` y `useClass`);
+la única que permite sustituirlo es `useExisting`.
+
+Con `useExisting`, `APP_GUARD` resuelve el proveedor que `AuthGuardModule.forRoot`
+ya expone —es `global: true` y lo exporta—, así que el override lo alcanza.
+
+Incluso si hoy no necesitás sustituirlo, registralo así: cuando aparezca la
+primera suite que lo necesite, el diagnóstico es caro y no se parece en nada a
+su causa.
+:::
 
 :::note[Esta guía recomendaba lo contrario hasta el 2026-09-25]
 Decía que la forma preferida era `app.useGlobalGuards(app.get(JwtAuthGuard))` en
 `main.ts`, porque el registro queda a la vista junto al `ValidationPipe`. El
 argumento era de legibilidad y no resistió la medición de abajo.
 
-`bc03-comercial` y `bc-06` usan esa forma. Funcionan y están protegidos en
-producción; el cambio es deuda, no una urgencia.
+`bc01-socio-negocio`, `bc03-comercial` y `bc14-cs-configuracion-general` ya usan
+`APP_GUARD` con `useExisting`. Queda `bc-06`, que registra en `main.ts`:
+funciona y está protegido en producción, el cambio es deuda y no una urgencia.
 :::
 
 ### Por qué `APP_GUARD` y no `main.ts`
