@@ -135,9 +135,25 @@ Los dos backends auditados usan patrones distintos y los dos cumplen:
 Comparar la cantidad de `@RequirePermission` contra la cantidad de endpoints
 parece razonable y está mal en las dos direcciones.
 
-**Falsos positivos:** contra BC-14 reporta 49 endpoints "desprotegidos" que en
-realidad heredan el permiso del controlador. Esa cuenta motivó un reporte
-equivocado de 50 endpoints abiertos en BC-14 el 2026-09-24.
+**Falsos positivos.** Hay dos formas distintas de caer en uno, y las dos se
+dieron auditando de verdad:
+
+*Por herencia.* Contra BC-14, contar reporta 49 endpoints "desprotegidos" que
+en realidad heredan el permiso del controlador. Esa cuenta motivó un reporte
+equivocado de 50 endpoints abiertos el 2026-09-24.
+
+*Por un comentario entre decoradores.* En BC-01 hay endpoints escritos así:
+
+```ts
+@Get(':numeroDocumento')
+// `bc01:personal:leer`: consulta M2M de solo lectura. No `bc01:integracion:leer`
+// (codigo inexistente en el catalogo del Auth Service -> 403 permanente).
+@RequirePermission('bc01:personal:leer')
+```
+
+Un lector de decoradores que se detenga en la primera línea que no empieza con
+`@` deja el permiso afuera y reporta el endpoint como abierto. Pasó el
+2026-09-25. El script de abajo atraviesa los comentarios por eso.
 
 **Falsos negativos:** no ve el único caso que importaba, que es un endpoint de
 escritura heredando un permiso de lectura.
@@ -158,6 +174,10 @@ cat > /tmp/auditar-permisos.mjs <<'EOF'
 // endpoints, y el del metodo sobreescribe al de la clase. Contar da falsos
 // positivos (reporta como huecos endpoints que heredan) y falsos negativos (no
 // ve una escritura protegida con un permiso de lectura).
+//
+// Y por que hay que atravesar los comentarios al leer los decoradores de un
+// metodo: un comentario entre el verbo y @RequirePermission es frecuente, y
+// cortar el bloque ahi hace que el endpoint figure como desprotegido.
 import { readFileSync } from 'node:fs'
 import { execSync } from 'node:child_process'
 
@@ -199,12 +219,19 @@ for (const archivo of archivos) {
     if (!ES_VERBO.test(t(i))) continue
     totales.endpoints++
 
-    // Bloque de decoradores del metodo: arriba y abajo del verbo, mientras
-    // sigan siendo decoradores.
+    // Bloque de decoradores del metodo: arriba y abajo del verbo.
+    //
+    // Se ATRAVIESAN los comentarios, no solo los decoradores. Entre el verbo y
+    // @RequirePermission suele haber una nota explicando la eleccion del
+    // permiso, y cortar ahi deja el decorador fuera del bloque: el endpoint
+    // figura como desprotegido cuando no lo esta. Es seguro, porque el
+    // recorrido termina igual en la firma del metodo, que no es ninguna de las
+    // dos cosas.
+    const acompana = (linea) => linea.startsWith('@') || linea.startsWith('//')
     let desde = i
-    while (desde > 0 && t(desde - 1).startsWith('@')) desde--
+    while (desde > 0 && acompana(t(desde - 1))) desde--
     let hasta = i
-    while (hasta < lineas.length - 1 && t(hasta + 1).startsWith('@')) hasta++
+    while (hasta < lineas.length - 1 && acompana(t(hasta + 1))) hasta++
     const bloque = lineas.slice(desde, hasta + 1).join('\n')
 
     if (claseEsPublica || bloque.includes('@Public()')) { totales.publicos++; continue }
