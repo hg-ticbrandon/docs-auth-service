@@ -35,21 +35,7 @@ página salen de auditarlo el 2026-09-24.
 marca con `@Public()`. Nunca al revés: proteger endpoint por endpoint deja huecos
 por olvido, y el olvido no se ve en code review.
 
-Hay dos formas de registrarlo y **las dos son válidas** —dan inyección de
-dependencias y cubren toda la app—, pero elegí una y no las mezclés dentro del
-mismo backend.
-
-**Forma A — en `main.ts`** (la que usa `bc03-comercial`):
-
-```ts
-import { JwtAuthGuard } from '@hagemsa/auth-guard';
-
-const app = await NestFactory.create(AppModule);
-app.useGlobalGuards(app.get(JwtAuthGuard));
-```
-
-**Forma B — como `APP_GUARD` en el módulo raíz** (la que usa
-`bc14-cs-configuracion-general`):
+Se registra como `APP_GUARD` en el módulo raíz:
 
 ```ts
 import { APP_GUARD } from '@nestjs/core';
@@ -60,9 +46,61 @@ import { APP_GUARD } from '@nestjs/core';
 export class AppModule {}
 ```
 
-La forma A es la recomendada para backends nuevos: el registro queda a la vista
-en el arranque, junto al `ValidationPipe` y los filtros, en vez de perdido entre
-los `providers` de un módulo.
+:::note[Esta guía recomendaba lo contrario hasta el 2026-09-25]
+Decía que la forma preferida era `app.useGlobalGuards(app.get(JwtAuthGuard))` en
+`main.ts`, porque el registro queda a la vista junto al `ValidationPipe`. El
+argumento era de legibilidad y no resistió la medición de abajo.
+
+`bc03-comercial` y `bc-06` usan esa forma. Funcionan y están protegidos en
+producción; el cambio es deuda, no una urgencia.
+:::
+
+### Por qué `APP_GUARD` y no `main.ts`
+
+**Porque `main.ts` no se ejecuta en los tests.** Un test que levante el módulo
+raíz obtiene la app SIN guard, y no hay forma de escribir uno que verifique que
+un endpoint quedó protegido.
+
+Medido con dos módulos idénticos salvo en dónde se registra un guard que
+siempre rechaza:
+
+```
+APP_GUARD en el módulo       -> GET /demo = 403   (guard aplicado)
+useGlobalGuards en main.ts   -> GET /demo = 200   (guard NO aplicado)
+```
+
+Se puede compensar repitiendo el cableado en cada test, y así lo hacen los dos
+backends: 19 de 20 suites e2e en `bc03-comercial`, 16 de 16 en `bc-06`, con el
+comentario «Igual que main.ts: aplica el guard global para verificar la
+protección real».
+
+El problema es que nada lo obliga, y ya falló. La suite número 20 de
+`bc03-comercial` omitía esa línea y afirmaba:
+
+```ts
+it('GET /api/prospectos devuelve 200', () => {
+  return request(app.getHttpServer()).get('/api/prospectos').expect(200);
+});
+```
+
+Ese endpoint exige `bc03:prospecto:leer` y en producción responde **401** sin
+token. El test pasaba porque corría sobre una app sin guard, y documentaba lo
+contrario de la realidad: cualquiera que lo leyera concluiría que `prospectos`
+es público. Estuvo así hasta que una auditoría lo encontró.
+
+Con `APP_GUARD` ese test habría recibido el guard solo, habría fallado desde el
+primer día y el error se habría visto enseguida.
+
+Lo secundario, pero cierto: el cableado de auth queda en un archivo en vez de
+repartido entre el módulo y `main.ts`.
+
+### Lo que NO cambia entre las dos formas
+
+Para descartar que se estuviera perdiendo algo al elegir: `AuthGuardModule.forRoot`
+se registra con `global: true` y exporta `JwtAuthGuard`, así que las dos
+resuelven el guard desde el contenedor con sus dependencias intactas. El orden
+frente a otros guards globales también se controla igual en ambas — con
+`APP_GUARD`, por el orden de los `providers`.
 
 :::caution[Lo que NO cuenta como guard global]
 `@UseGuards(JwtAuthGuard)` en cada controlador. Funciona, pero es opt-in: el

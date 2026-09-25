@@ -156,20 +156,29 @@ export GOOGLE_NPM_TOKEN="$(gcloud auth print-access-token)"
 pnpm add @hagemsa/auth-guard@^0.3.1
 ```
 
-Registra `forServiceClient` (es independiente de `forRoot`; puedes tener los dos):
+Registra `forServiceClient` (es independiente de `forRoot`; puedes tener los dos),
+**condicionado a que existan las credenciales** — ver
+[el patrón completo](/integracion/m2m/#2-consumir-tokens-con-servicetokenprovider):
 
 ```typescript
 // Flota — app.module.ts
 import { AuthGuardModule } from '@hagemsa/auth-guard';
+import { AUTH_DEFAULTS } from './shared/auth.defaults';
+
+const modulosClienteServicio =
+  process.env.SVC_CLIENT_ID && process.env.SVC_CLIENT_SECRET
+    ? [
+        AuthGuardModule.forServiceClient({
+          authServiceUrl:
+            process.env.AUTH_SERVICE_URL ?? AUTH_DEFAULTS.authServiceUrl,
+          clientId: process.env.SVC_CLIENT_ID,
+          clientSecret: process.env.SVC_CLIENT_SECRET,
+        }),
+      ]
+    : [];
 
 @Module({
-  imports: [
-    AuthGuardModule.forServiceClient({
-      authServiceUrl: process.env.AUTH_SERVICE_URL!,
-      clientId: process.env.SVC_CLIENT_ID!,
-      clientSecret: process.env.SVC_CLIENT_SECRET!,
-    }),
-  ],
+  imports: [...modulosClienteServicio],
 })
 export class AppModule {}
 ```

@@ -72,24 +72,85 @@ disparan un solo `POST /token`).
 
 Registralo con `forServiceClient` — es **independiente** de `forRoot`. Un backend
 puede validar tokens entrantes (`forRoot`) y/o emitir salientes
-(`forServiceClient`):
+(`forServiceClient`).
+
+**Se registra CONDICIONADO a que existan las credenciales:**
 
 ```typescript
 // app.module.ts
 import { AuthGuardModule } from '@hagemsa/auth-guard';
+import { AUTH_DEFAULTS } from './shared/auth.defaults';
+
+// Solo si hay credenciales de cliente de servicio. Sin ellas el módulo no se
+// registra y el backend arranca igual, en vez de reventar en un entorno donde
+// no hace falta M2M.
+const modulosClienteServicio =
+  process.env.SVC_CLIENT_ID && process.env.SVC_CLIENT_SECRET
+    ? [
+        AuthGuardModule.forServiceClient({
+          authServiceUrl:
+            process.env.AUTH_SERVICE_URL ?? AUTH_DEFAULTS.authServiceUrl,
+          clientId: process.env.SVC_CLIENT_ID,
+          clientSecret: process.env.SVC_CLIENT_SECRET,
+        }),
+      ]
+    : [];
 
 @Module({
   imports: [
-    // Emite tokens salientes hacia otros backends.
-    AuthGuardModule.forServiceClient({
-      authServiceUrl: process.env.AUTH_SERVICE_URL!,
-      clientId: process.env.SVC_CLIENT_ID!,
-      clientSecret: process.env.SVC_CLIENT_SECRET!, // desde Secret Manager
-    }),
+    AuthGuardModule.forRoot({ /* ... */ }),
+    ...modulosClienteServicio,
   ],
 })
 export class AppModule {}
 ```
+
+Dentro del ternario no hacen falta los `!`: la condición ya le probó a
+TypeScript que las dos variables son `string`.
+
+:::note[Esta página mostraba el registro incondicional]
+Hasta el 2026-09-25 el ejemplo registraba `forServiceClient` siempre, con
+`process.env.SVC_CLIENT_ID!`. Ningún backend del ERP lo hace así: los cuatro que
+usan M2M —`bc01`, `bc03`, `bc06` y `bc14`— llegaron por su cuenta al registro
+condicional. La página mostraba una forma que nadie usa.
+:::
+
+### Inyectarlo con `@Optional()`
+
+La consecuencia directa de lo anterior: si el módulo puede no estar registrado,
+el provider puede no existir, y hay que inyectarlo como opcional.
+
+```typescript
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import { ServiceTokenProvider } from '@hagemsa/auth-guard';
+
+@Injectable()
+export class ClienteBc14 {
+  constructor(@Optional() private readonly tokens?: ServiceTokenProvider) {}
+}
+```
+
+Sin `@Optional()`, un entorno sin credenciales no arranca: Nest falla al
+resolver una dependencia que nadie proveyó.
+
+### Decidí qué pasa cuando NO hay cliente de servicio
+
+Esto es lo que más varía entre backends, y conviene que sea una decisión
+explícita y escrita, no lo que salga por omisión. Las cuatro que están en uso:
+
+| Estrategia | Quién la usa | Cuándo conviene |
+| --- | --- | --- |
+| Reenviar el token del usuario de la request | `bc01` | La llamada saliente siempre nace de una petición con usuario. **Ojo:** del otro lado queda auditado el usuario, no el servicio. |
+| Llamar sin `Authorization` | `bc14` | El destino rechaza y el fallo se ve. Sirve si la función es opcional. |
+| Caer a un valor por defecto | `bc03` | Hay una respuesta razonable sin consultar (ej. un destinatario fijo). |
+| Apagar la función | `bc06` | La función no tiene sentido sin M2M. |
+
+Las cuatro son defendibles. Lo que no conviene es elegir sin querer.
+
+Y ojo con la primera: reenviar el token del usuario **cambia quién queda en la
+auditoría del backend de destino**. Si la llamada puede nacer fuera de una
+petición HTTP —un cron, un job de arranque, un consumidor de eventos—, ahí no
+hay token que reenviar y la llamada sale sin `Authorization`.
 
 Después, inyecta el provider donde hagas la llamada saliente:
 

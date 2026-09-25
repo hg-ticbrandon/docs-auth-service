@@ -3,25 +3,26 @@ title: Configuración
 description: Cómo cablear AuthGuardModule en tu app NestJS.
 ---
 
-## Módulo raíz (configuración mínima)
-
-Esto es **todo lo que necesitas** para validar JWT + permisos + scopes. Los
-permisos y scopes vienen embebidos en el JWT, así que **no** hace falta
-`authServiceUrl` ni `internalSecret` para autorizar.
+## Módulo raíz
 
 ```typescript
 // app.module.ts
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuardModule, JwtAuthGuard } from '@hagemsa/auth-guard';
+import { AUTH_DEFAULTS } from './shared/auth.defaults';
 
 @Module({
   imports: [
     AuthGuardModule.forRoot({
-      jwksUrl: process.env.AUTH_JWKS_URL!,
-      issuer: process.env.AUTH_JWT_ISSUER!,
-      audience: process.env.AUTH_JWT_AUDIENCE!,
-      // No activamos blacklist: el access token vale hasta su exp (~1h).
+      jwksUrl: process.env.AUTH_JWKS_URL ?? AUTH_DEFAULTS.jwksUrl,
+      issuer: process.env.AUTH_JWT_ISSUER ?? AUTH_DEFAULTS.issuer,
+      audience: process.env.AUTH_JWT_AUDIENCE ?? AUTH_DEFAULTS.audience,
+      // Los dos de abajo NO se usan mientras el Auth emita tokens "gordos",
+      // pero van igual: ver el aviso.
+      authServiceUrl:
+        process.env.AUTH_SERVICE_URL ?? AUTH_DEFAULTS.authServiceUrl,
+      internalSecret: process.env.AUTH_INTERNAL_SECRET,
     }),
   ],
   providers: [
@@ -32,6 +33,41 @@ import { AuthGuardModule, JwtAuthGuard } from '@hagemsa/auth-guard';
 })
 export class AppModule {}
 ```
+
+`AUTH_DEFAULTS` es una constante del propio backend; su contenido está en la
+[regla 7 del estándar](/integracion/estandar-backend/).
+
+:::danger[Los cinco campos van siempre, aunque hoy sobren dos]
+Hasta el 2026-09-25 esta página presentaba una «configuración mínima» de tres
+campos y decía que `authServiceUrl` e `internalSecret` no hacían falta. Es
+cierto **hoy**: con tokens «gordos» los permisos viajan embebidos y el guard
+autoriza sin consultar nada.
+
+Deja de ser cierto en cuanto el Auth Service emita tokens «flacos»
+(`JWT_EMBED_PERMISOS=false`). Ahí el guard tiene que resolver `rol → permisos`
+contra `GET /api/internal/roles-permisos`, y sin esos dos campos **devuelve 500
+en todos los endpoints con permiso**.
+
+Lo insidioso es el diagnóstico: las variables de entorno suelen estar puestas en
+Cloud Run, así que uno mira el servicio desplegado, las ve, y concluye que está
+bien. El problema es que el código no las lee.
+
+Tres backends del ERP —`bc01-socio-negocio`, `bc14-cs-configuracion-general` y
+uno más— quedaron así por seguir esta página. Se corrigieron en septiembre de
+2026.
+:::
+
+:::caution[`env!` no es lo mismo que `env ?? DEFAULT`]
+`process.env.AUTH_JWKS_URL!` le promete a TypeScript que la variable existe. Si
+falta, el compilador calla y en runtime llega `undefined`: el error aparece lejos
+del origen y sin decir qué variable era.
+
+Con `?? AUTH_DEFAULTS.jwksUrl` el backend arranca en cualquier entorno sin
+declarar cada variable, y el entorno pisa solo lo que necesita.
+
+`AUTH_INTERNAL_SECRET` es el único sin default, porque es un secreto y un default
+lo volvería inútil.
+:::
 
 > Importante: carga el `.env` **antes** de importar `AppModule` (ej.
 > `import 'dotenv/config'` como primera línea de `main.ts`), porque
@@ -45,13 +81,13 @@ un fetch al Auth Service por request (cacheado 30s por jti) y requiere
 
 ```typescript
 AuthGuardModule.forRoot({
-  jwksUrl: process.env.AUTH_JWKS_URL!,
-  issuer: process.env.AUTH_JWT_ISSUER!,
-  audience: process.env.AUTH_JWT_AUDIENCE!,
+  jwksUrl: process.env.AUTH_JWKS_URL ?? AUTH_DEFAULTS.jwksUrl,
+  issuer: process.env.AUTH_JWT_ISSUER ?? AUTH_DEFAULTS.issuer,
+  audience: process.env.AUTH_JWT_AUDIENCE ?? AUTH_DEFAULTS.audience,
 
   // Cierra la ventana entre logout y exp del JWT (tradeoff: +1 fetch/req, cacheado 30s).
   enableBlacklistCheck: true,
-  authServiceUrl: process.env.AUTH_SERVICE_URL!,
+  authServiceUrl: process.env.AUTH_SERVICE_URL ?? AUTH_DEFAULTS.authServiceUrl,
 
   // El Auth Service exige X-Internal-Secret para /api/internal/*. Sin esto,
   // /api/internal/* devuelve 401 y la blacklist falla cerrada → 401 a tu cliente.
@@ -78,12 +114,12 @@ campos que la blacklist:
 
 ```typescript
 AuthGuardModule.forRoot({
-  jwksUrl: process.env.AUTH_JWKS_URL!,
-  issuer: process.env.AUTH_JWT_ISSUER!,
-  audience: process.env.AUTH_JWT_AUDIENCE!,
+  jwksUrl: process.env.AUTH_JWKS_URL ?? AUTH_DEFAULTS.jwksUrl,
+  issuer: process.env.AUTH_JWT_ISSUER ?? AUTH_DEFAULTS.issuer,
+  audience: process.env.AUTH_JWT_AUDIENCE ?? AUTH_DEFAULTS.audience,
 
   // Necesarios para resolver permisos de un token flaco:
-  authServiceUrl: process.env.AUTH_SERVICE_URL!,
+  authServiceUrl: process.env.AUTH_SERVICE_URL ?? AUTH_DEFAULTS.authServiceUrl,
   internalSecret: process.env.AUTH_INTERNAL_SECRET,
 
   // Opcional: cuánto cachear el catálogo rol→permisos (default 300s).
@@ -104,18 +140,18 @@ AuthGuardModule.forRoot({
   jwksUrl, issuer, audience,          // ← le falta authServiceUrl/internalSecret
 }),
 AuthGuardModule.forServiceClient({
-  authServiceUrl: process.env.AUTH_SERVICE_URL!,   // ← este NO cuenta para el guard
+  authServiceUrl: process.env.AUTH_SERVICE_URL ?? AUTH_DEFAULTS.authServiceUrl,   // ← este NO cuenta para el guard
   clientId, clientSecret,
 }),
 
 // ✓ BIEN: cada módulo con su propia config
 AuthGuardModule.forRoot({
   jwksUrl, issuer, audience,
-  authServiceUrl: process.env.AUTH_SERVICE_URL!,
+  authServiceUrl: process.env.AUTH_SERVICE_URL ?? AUTH_DEFAULTS.authServiceUrl,
   internalSecret: process.env.AUTH_INTERNAL_SECRET,
 }),
 AuthGuardModule.forServiceClient({
-  authServiceUrl: process.env.AUTH_SERVICE_URL!,
+  authServiceUrl: process.env.AUTH_SERVICE_URL ?? AUTH_DEFAULTS.authServiceUrl,
   clientId, clientSecret,
 }),
 ```
@@ -172,12 +208,12 @@ AuthGuardModule.forRoot({
 
 ```typescript
 AuthGuardModule.forRoot({
-  jwksUrl: process.env.AUTH_JWKS_URL!,
-  issuer: process.env.AUTH_JWT_ISSUER!,
-  audience: process.env.AUTH_JWT_AUDIENCE!,
+  jwksUrl: process.env.AUTH_JWKS_URL ?? AUTH_DEFAULTS.jwksUrl,
+  issuer: process.env.AUTH_JWT_ISSUER ?? AUTH_DEFAULTS.issuer,
+  audience: process.env.AUTH_JWT_AUDIENCE ?? AUTH_DEFAULTS.audience,
   // Las 3 de arriba alcanzan. Agrega lo de abajo solo si quieres logout instantáneo:
   enableBlacklistCheck: true,
-  authServiceUrl: process.env.AUTH_SERVICE_URL!,
+  authServiceUrl: process.env.AUTH_SERVICE_URL ?? AUTH_DEFAULTS.authServiceUrl,
   internalSecret: process.env.AUTH_INTERNAL_SECRET,
 }),
 ```
@@ -189,13 +225,24 @@ necesita **llamar** a otro backend protegido por su cuenta (sin un usuario en el
 medio), registra también `forServiceClient` (≥ 0.3.1). Son independientes: puedes
 usar uno, el otro, o los dos.
 
+Se registra **condicionado** a que existan las credenciales, para que el backend
+arranque igual donde no hace falta M2M:
+
 ```typescript
 // app.module.ts
-AuthGuardModule.forServiceClient({
-  authServiceUrl: process.env.AUTH_SERVICE_URL!,
-  clientId: process.env.SVC_CLIENT_ID!,
-  clientSecret: process.env.SVC_CLIENT_SECRET!, // desde Secret Manager, nunca hardcodeado
-}),
+const modulosClienteServicio =
+  process.env.SVC_CLIENT_ID && process.env.SVC_CLIENT_SECRET
+    ? [
+        AuthGuardModule.forServiceClient({
+          authServiceUrl:
+            process.env.AUTH_SERVICE_URL ?? AUTH_DEFAULTS.authServiceUrl,
+          clientId: process.env.SVC_CLIENT_ID,
+          clientSecret: process.env.SVC_CLIENT_SECRET, // desde Secret Manager
+        }),
+      ]
+    : [];
+
+// @Module({ imports: [..., ...modulosClienteServicio] })
 ```
 
 Esto expone un `ServiceTokenProvider` inyectable que obtiene y cachea el token de

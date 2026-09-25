@@ -72,17 +72,17 @@ con la flag sola:
 
 ```typescript
 AuthGuardModule.forRoot({
-  jwksUrl: process.env.AUTH_JWKS_URL!,
-  issuer: process.env.AUTH_JWT_ISSUER!,
-  audience: process.env.AUTH_JWT_AUDIENCE!,
+  jwksUrl: process.env.AUTH_JWKS_URL ?? AUTH_DEFAULTS.jwksUrl,
+  issuer: process.env.AUTH_JWT_ISSUER ?? AUTH_DEFAULTS.issuer,
+  audience: process.env.AUTH_JWT_AUDIENCE ?? AUTH_DEFAULTS.audience,
 
   // 1. Prende el chequeo de blacklist en cada request.
   enableBlacklistCheck: true,
   // 2. URL base del Auth Service (para llamar a /api/internal/jti/:jti/revoked).
-  authServiceUrl: process.env.AUTH_SERVICE_URL!,
+  authServiceUrl: process.env.AUTH_SERVICE_URL ?? AUTH_DEFAULTS.authServiceUrl,
   // 3. Shared secret; el endpoint interno lo exige. Debe coincidir con
   //    INTERNAL_SHARED_SECRET del Auth Service.
-  internalSecret: process.env.AUTH_INTERNAL_SECRET!,
+  internalSecret: process.env.AUTH_INTERNAL_SECRET,
 }),
 ```
 
