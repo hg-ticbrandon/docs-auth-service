@@ -27,20 +27,25 @@ pero se publicó el 2026-07-02.
 | [0.2.0](#020) | 2026-07-02 | Vínculo con el socio de negocio de BC01 en el contexto | No |
 | [0.1.0](#010) | 2026-05-29 | Primera versión: guard JWT, decoradores, JWKS, blacklist | — |
 
-:::danger[Casi todos los backends siguen en 0.4.0, sin las correcciones de la 0.5.0]
-Medido el **2026-09-24** leyendo el `package.json` de cada repositorio:
+:::caution[Cuatro backends ya están en 0.6.0 en el código; solo uno está confirmado en producción]
+Medido el **2026-09-25** leyendo el **lockfile** de cada repositorio —no el
+`package.json`, que declara un rango y no lo que quedó instalado—:
 
-| Backend | Versión | Estado |
+| Backend | En el código | En producción |
 | --- | --- | --- |
-| `bc03-comercial` | **0.6.0** | Al día. Actualizado y desplegado el 2026-09-24. |
+| `bc01-socio-negocio` | **0.6.0** | Sin confirmar: la imagen que corre es anterior. |
+| `bc02-activos` | **0.6.0** | Sin confirmar: la imagen que corre es anterior. |
+| `bc03-comercial` | **0.6.0** | Desplegado el 2026-09-24. |
+| `bc14-cs-configuracion-general` | **0.6.0** | Sin confirmar: la imagen que corre es anterior. |
 | `bc-06` operaciones | 0.4.0 | Le faltan las correcciones de la 0.5.0. |
-| `bc14-cs-configuracion-general` | 0.4.0 | Le faltan las correcciones de la 0.5.0. |
 | `bc04-flota` | — | No depende de `auth-guard`. |
 | `hg-evaluaciones-bk` | — | No depende de `auth-guard`, y no tiene `.npmrc`. |
 
-`bc01-socio-negocio` y `bc02-activos` no están en esta medición porque sus
-repositorios no estaban disponibles al medir. Su última lectura conocida es la
-del 2026-08-17, que los ubicaba en 0.4.0.
+Las dos columnas dicen cosas distintas y conviene no confundirlas: la primera se
+lee del repositorio, la segunda exige que alguien haya redesplegado. El tag de
+la imagen en Cloud Run no sirve para deducirla —`bc02-activos` y `bc03-comercial`
+publican como `:latest`—, así que «sin confirmar» significa exactamente eso: no
+que esté desactualizado, sino que no se verificó.
 
 Que un backend no dependa de `auth-guard` no es de por sí un problema —puede ser
 un servicio interno sin HTTP expuesto al usuario— pero hay que confirmarlo caso

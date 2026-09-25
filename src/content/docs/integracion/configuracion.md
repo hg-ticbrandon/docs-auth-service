@@ -56,9 +56,9 @@ Lo insidioso es el diagnóstico: las variables de entorno suelen estar puestas e
 Cloud Run, así que uno mira el servicio desplegado, las ve, y concluye que está
 bien. El problema es que el código no las lee.
 
-Tres backends del ERP —`bc01-socio-negocio`, `bc14-cs-configuracion-general` y
-uno más— quedaron así por seguir esta página. Se corrigieron en septiembre de
-2026.
+Cuatro backends del ERP —`bc01-socio-negocio`, `bc02-activos`,
+`bc14-cs-configuracion-general` y uno más— quedaron así por seguir esta página.
+Se corrigieron en septiembre de 2026.
 :::
 
 :::caution[`env!` no es lo mismo que `env ?? DEFAULT`]

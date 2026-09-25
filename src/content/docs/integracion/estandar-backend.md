@@ -80,9 +80,10 @@ Decía que la forma preferida era `app.useGlobalGuards(app.get(JwtAuthGuard))` e
 `main.ts`, porque el registro queda a la vista junto al `ValidationPipe`. El
 argumento era de legibilidad y no resistió la medición de abajo.
 
-`bc01-socio-negocio`, `bc03-comercial` y `bc14-cs-configuracion-general` ya usan
-`APP_GUARD` con `useExisting`. Queda `bc-06`, que registra en `main.ts`:
-funciona y está protegido en producción, el cambio es deuda y no una urgencia.
+`bc01-socio-negocio`, `bc02-activos`, `bc03-comercial` y
+`bc14-cs-configuracion-general` ya usan `APP_GUARD` con `useExisting`. Queda
+`bc-06`, que registra en `main.ts`: funciona y está protegido en producción, el
+cambio es deuda y no una urgencia.
 :::
 
 ### Por qué `APP_GUARD` y no `main.ts`
@@ -299,6 +300,28 @@ for (const archivo of archivos) {
     let desde = i
     while (desde > 0 && acompana(t(desde - 1))) desde--
     let hasta = i
+    // Un decorador de verbo puede ocupar VARIAS lineas cuando la ruta es larga:
+    //
+    //   @Post(
+    //     'codigo/:codigo/documentos-compartidos/:id/coberturas',
+    //   )
+    //   @RequirePermission('bc02:activo:escribir')
+    //
+    // La linea de la ruta no es un decorador ni un comentario, asi que el
+    // recorrido de abajo cortaba ahi: el bloque quedaba en `@Post(` solo, el
+    // @RequirePermission caia fuera y el endpoint se reportaba como una
+    // escritura que hereda un permiso de lectura. Fue un falso positivo contra
+    // bc02-activos. Primero se avanza hasta cerrar los parentesis del propio
+    // decorador.
+    let balance = 0
+    for (let k = i; k < lineas.length; k++) {
+      for (const ch of lineas[k]) {
+        if (ch === '(') balance++
+        else if (ch === ')') balance--
+      }
+      hasta = k
+      if (balance <= 0) break
+    }
     while (hasta < lineas.length - 1 && acompana(t(hasta + 1))) hasta++
     const bloque = lineas.slice(desde, hasta + 1).join('\n')
 
@@ -340,9 +363,27 @@ node /tmp/auditar-permisos.mjs
 ```
 
 El resultado esperado es `SIN NINGUN PERMISO: 0` y ninguna escritura con permiso
-de lectura. Medido el 2026-09-24:
+de lectura. Medido el 2026-09-25:
 
 ```
+=== bc01-socio-negocio ===
+controladores: 15 | endpoints: 79
+  permiso propio:           75
+  heredan del controlador:  0
+  @Public():                4
+  SIN NINGUN PERMISO:       0
+
+Sin hallazgos.
+
+=== bc02-activos ===
+controladores: 7 | endpoints: 93
+  permiso propio:           48
+  heredan del controlador:  43
+  @Public():                2
+  SIN NINGUN PERMISO:       0
+
+Sin hallazgos.
+
 === bc03-comercial ===
 controladores: 19 | endpoints: 170
   permiso propio:           165
@@ -353,7 +394,7 @@ controladores: 19 | endpoints: 170
 Sin hallazgos.
 
 === bc14-cs-configuracion-general ===
-controladores: 2 | endpoints: 111
+controladores: 6 | endpoints: 111
   permiso propio:           60
   heredan del controlador:  49
   @Public():                2
