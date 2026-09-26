@@ -98,12 +98,31 @@ Responses son siempre `application/json` (excepto `/health`, que también es JSO
 |---|---|---|
 | `COMUN_VALIDACION_FALLIDA` | 422 | DTO con campos inválidos. `errores` lista qué campos. |
 | `COMUN_NO_AUTENTICADO` | 401 | Falta JWT, o el JWT es inválido/expirado. |
-| `COMUN_PROHIBIDO` | 403 | JWT válido pero sin el permiso o scope requerido. |
+| `COMUN_SIN_PERMISO` | 403 | JWT válido pero sin el permiso o scope requerido. |
 | `COMUN_SOLICITUD_INVALIDA` | 400 | Solicitud mal formada, payload corrupto. |
 | `COMUN_NO_ENCONTRADO` | 404 | Recurso inexistente (genérico). |
 | `COMUN_CONFLICTO` | 409 | Conflicto genérico de estado. |
-| `COMUN_LIMITE_PETICIONES` | 429 | Rate limit excedido. |
+| `COMUN_DEMASIADAS_PETICIONES` | 429 | Rate limit excedido. |
+| `COMUN_SERVICIO_NO_DISPONIBLE` | 503 | Una dependencia no respondió. El mensaje SÍ es para el usuario. |
 | `COMUN_ERROR_INTERNO` | 500 | Bug en el servidor. Sin detalle interno expuesto. |
+
+:::note[Dos de estos códigos cambiaron el 2026-09-26]
+El Auth Service emitía `COMUN_PROHIBIDO` y `COMUN_LIMITE_PETICIONES`, mientras que
+`bc02-activos`, `bc03-comercial`, `bc06-operaciones` y `bc14-cs-configuracion-general`
+ya usaban `COMUN_SIN_PERMISO` y `COMUN_DEMASIADAS_PETICIONES` para exactamente lo
+mismo. Se unificó por donde estaba la mayoría —cuatro backends contra uno— y el
+Auth Service se alineó.
+
+El cambio no rompió al frontend porque no discrimina por código: `formato-error.ts`
+expone `obtenerCodigoError()` de forma genérica y las decisiones se toman por
+status. Si tu código sí compara contra estos dos valores, hay que actualizarlo.
+:::
+
+**Un 5xx nunca devuelve su mensaje, salvo el 503.** Un 500 es algo que nadie
+previó: su `detalle` puede traer nombres de tablas, hosts o cadenas de conexión,
+así que la respuesta lleva un texto genérico y el mensaje real queda solo en el
+log, correlacionado por `trazaId`. El 503 es la excepción a propósito, porque su
+mensaje sí se escribe para quien lo va a leer.
 
 **Específicos del Auth Service — prefijo `AUTH_`:** ver [Errores comunes](/integracion/errores-comunes/) para la lista completa con descripción de cada uno.
 
@@ -199,17 +218,17 @@ DELETE /api/admin/roles/.../permisos/...   → 204 No Content
 | `204` | OK sin body | — |
 | `400` | Solicitud mal formada | Error del contrato |
 | `401` | No autenticado | Error del contrato (`COMUN_NO_AUTENTICADO` / `AUTH_CREDENCIALES_INVALIDAS` / `AUTH_TOKEN_INVALIDO`) |
-| `403` | Sin permiso o acción prohibida | Error del contrato (`COMUN_PROHIBIDO`, `AUTH_ROL_DE_SISTEMA_PROTEGIDO`) |
+| `403` | Sin permiso o acción prohibida | Error del contrato (`COMUN_SIN_PERMISO`, `AUTH_ROL_DE_SISTEMA_PROTEGIDO`) |
 | `404` | No encontrado | Error del contrato del dominio |
 | `409` | Conflicto de estado | Error del contrato (`AUTH_CUENTA_SUSPENDIDA`, `AUTH_EMAIL_YA_REGISTRADO`, `AUTH_NOMBRE_USUARIO_YA_REGISTRADO`, `AUTH_ROL_YA_EXISTE`, `AUTH_ROL_EN_USO`, `AUTH_PERMISO_YA_EXISTE`, `AUTH_PERMISO_EN_USO`, etc.) |
 | `422` | Validación fallida | Error del contrato con array `errores` |
 | `423` | Recurso bloqueado | `AUTH_CUENTA_BLOQUEADA` (tras múltiples intentos fallidos) |
-| `429` | Rate limit | `COMUN_LIMITE_PETICIONES` |
+| `429` | Rate limit | `COMUN_DEMASIADAS_PETICIONES` |
 | `500` | Error interno | `COMUN_ERROR_INTERNO` (sin detalles internos expuestos) |
 
 ## Rate limiting
 
-Hay un límite global de **60 requests por minuto por IP** en cualquier endpoint (vía `@nestjs/throttler`). Algunos endpoints sensibles tienen límites más estrictos con `@Throttle`: `POST /api/auth/forgot-password` a **3/min** y `POST /api/auth/reset-password` a **5/min**. `POST /api/auth/login` usa el límite global (60/min). Excedido → `429` con `codigo: "COMUN_LIMITE_PETICIONES"`.
+Hay un límite global de **60 requests por minuto por IP** en cualquier endpoint (vía `@nestjs/throttler`). Algunos endpoints sensibles tienen límites más estrictos con `@Throttle`: `POST /api/auth/forgot-password` a **3/min** y `POST /api/auth/reset-password` a **5/min**. `POST /api/auth/login` usa el límite global (60/min). Excedido → `429` con `codigo: "COMUN_DEMASIADAS_PETICIONES"`.
 
 ## Correlation ID
 

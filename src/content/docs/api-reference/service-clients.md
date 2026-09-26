@@ -62,7 +62,7 @@ Content-Type: application/json
 |---|---|---|
 | 400 | `AUTH_SERVICE_CLIENT_ID_INVALIDO` | `clientId` con formato inválido. |
 | 409 | `AUTH_SERVICE_CLIENT_YA_EXISTE` | Ya existe un cliente con ese `clientId`. |
-| 403 | `COMUN_PROHIBIDO` | Falta el permiso `auth:service-client:write`. |
+| 403 | `COMUN_SIN_PERMISO` | Falta el permiso `auth:service-client:write`. |
 
 ## GET /api/admin/service-clients
 

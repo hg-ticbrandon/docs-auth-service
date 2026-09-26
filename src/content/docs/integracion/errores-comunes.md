@@ -10,9 +10,9 @@ description: Problemas frecuentes integrando @hagemsa/auth-guard y cómo resolve
 | `codigo` | HTTP | Significado |
 |---|---|---|
 | `COMUN_NO_AUTENTICADO` | 401 | Falta header `Authorization`, JWT mal formado o expirado. |
-| `COMUN_PROHIBIDO` | 403 | JWT válido pero sin permiso/scope requerido. |
+| `COMUN_SIN_PERMISO` | 403 | JWT válido pero sin permiso/scope requerido. |
 | `COMUN_VALIDACION_FALLIDA` | 422 | DTO con campos inválidos. El array `errores` lista qué campos. |
-| `COMUN_LIMITE_PETICIONES` | 429 | Rate limit excedido. |
+| `COMUN_DEMASIADAS_PETICIONES` | 429 | Rate limit excedido. |
 | `AUTH_CREDENCIALES_INVALIDAS` | 401 | Login con identificador (email o usuario) / password incorrectos (genérico — no enumera cuentas). |
 | `AUTH_NOMBRE_USUARIO_YA_REGISTRADO` | 409 | Ya existe una cuenta con ese nombre de usuario. |
 | `AUTH_NOMBRE_USUARIO_INVALIDO` | 400 | Nombre de usuario con formato inválido. |
@@ -67,7 +67,7 @@ Y que la env `AUTH_INTERNAL_SECRET` coincide exactamente con la del Auth Service
 2. La lib refresca automáticamente al detectar cache miss. Si sigue fallando, haz un fetch manual: `curl <AUTH_JWKS_URL>` y compara el `kid` con el del JWT (decodificalo en jwt.io).
 3. Si el Auth Service rotó claves, espera unos segundos para que la lib refresque.
 
-## 403 con codigo: COMUN_PROHIBIDO
+## 403 con codigo: COMUN_SIN_PERMISO
 
 **Síntoma:** el JWT es válido pero tu backend devuelve 403.
 

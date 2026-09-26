@@ -306,7 +306,7 @@ curl -s https://wms.hagemsa.com/api/inventario/lima-1 \
 | Síntoma | Causa | Solución |
 |---|---|---|
 | `401` en `POST /api/auth/token` (`AUTH_SERVICE_CLIENT_CREDENCIALES_INVALIDAS`) | `clientId` o `clientSecret` mal | Verifica el secret; si se perdió, [rota](/api-reference/service-clients/#post-apiadminservice-clientsidrotar-secreto). |
-| `403` en el endpoint destino (`COMUN_PROHIBIDO`) | El token es válido pero el `svc-client` **no tiene el permiso** requerido | Agrega el permiso al rol del cliente (paso 1) y **vuelve a pedir el token** (los permisos se resuelven al emitir; el token viejo no se actualiza hasta vencer). |
+| `403` en el endpoint destino (`COMUN_SIN_PERMISO`) | El token es válido pero el `svc-client` **no tiene el permiso** requerido | Agrega el permiso al rol del cliente (paso 1) y **vuelve a pedir el token** (los permisos se resuelven al emitir; el token viejo no se actualiza hasta vencer). |
 | `409` en `POST /api/auth/token` (`AUTH_SERVICE_CLIENT_SUSPENDIDO`) | El cliente de servicio está suspendido | Reactivalo con `POST /admin/service-clients/:id/reactivar`. |
 | `403` con `@ServiceOnly()`/`@UserOnly()` | El endpoint restringe por tipo de token | Revisa que el tipo de token coincida con el decorador. Para M2M común, no uses esos decoradores. |
 | Cambié permisos y el backend sigue con `403` | El token cacheado es viejo | Espera el TTL (10 min) o llama `serviceTokenProvider.invalidar()` para forzar re-emisión. |

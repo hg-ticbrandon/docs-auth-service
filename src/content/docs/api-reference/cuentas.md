@@ -65,7 +65,7 @@ Content-Type: application/json
 | 422 | `COMUN_VALIDACION_FALLIDA` | DTO inválido (con array `errores` por campo; incluye formato de `nombreUsuario`). |
 | 409 | `AUTH_EMAIL_YA_REGISTRADO` | Ya existe una cuenta con ese email. |
 | 409 | `AUTH_NOMBRE_USUARIO_YA_REGISTRADO` | Ya existe una cuenta con ese nombre de usuario. |
-| 403 | `COMUN_PROHIBIDO` | JWT sin permiso `auth:account:write`. |
+| 403 | `COMUN_SIN_PERMISO` | JWT sin permiso `auth:account:write`. |
 
 ## GET /api/admin/cuentas
 

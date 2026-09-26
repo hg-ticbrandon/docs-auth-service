@@ -45,7 +45,7 @@ Content-Type: application/json
 | 409 | `AUTH_CUENTA_SUSPENDIDA` / `AUTH_CUENTA_INACTIVA` | Credenciales correctas pero la cuenta no está habilitada (se revela solo tras validar la password). |
 | 423 | `AUTH_CUENTA_BLOQUEADA` | Bloqueo por múltiples intentos fallidos. |
 | 422 | `COMUN_VALIDACION_FALLIDA` | DTO inválido (identificador o password vacío). |
-| 429 | `COMUN_LIMITE_PETICIONES` | Más de 60 intentos por minuto desde la misma IP (límite global). |
+| 429 | `COMUN_DEMASIADAS_PETICIONES` | Más de 60 intentos por minuto desde la misma IP (límite global). |
 
 ## POST /api/auth/refresh
 
@@ -125,7 +125,7 @@ El frontend muestra siempre el mismo mensaje genérico al usuario ("Si el email 
 | HTTP | `codigo` | Cuándo |
 |---|---|---|
 | 422 | `COMUN_VALIDACION_FALLIDA` | Email mal formado. |
-| 429 | `COMUN_LIMITE_PETICIONES` | Más de 3 intentos por minuto desde la misma IP. |
+| 429 | `COMUN_DEMASIADAS_PETICIONES` | Más de 3 intentos por minuto desde la misma IP. |
 
 ## POST /api/auth/reset-password
 
@@ -151,7 +151,7 @@ Content-Type: application/json
 |---|---|---|
 | 400 | `AUTH_RESET_TOKEN_INVALIDO` | Token de reset inválido, expirado o ya consumido. |
 | 422 | `AUTH_PASSWORD_NO_CUMPLE_POLITICA` | Password no cumple la política (mínimo 8 chars, al menos 1 mayúscula y 1 número). |
-| 429 | `COMUN_LIMITE_PETICIONES` | Más de 5 intentos por minuto desde la misma IP. |
+| 429 | `COMUN_DEMASIADAS_PETICIONES` | Más de 5 intentos por minuto desde la misma IP. |
 
 ## POST /api/auth/token
 
@@ -199,7 +199,7 @@ Content-Type: application/json
 | 401 | `AUTH_SERVICE_CLIENT_CREDENCIALES_INVALIDAS` | `clientId` o `clientSecret` inválidos, o cliente inexistente. (Mensaje genérico — no enumeramos.) |
 | 409 | `AUTH_SERVICE_CLIENT_SUSPENDIDO` | El cliente de servicio está suspendido. |
 | 422 | `COMUN_VALIDACION_FALLIDA` | Falta `grantType` (debe ser `"client_credentials"`), `clientId` o `clientSecret`. |
-| 429 | `COMUN_LIMITE_PETICIONES` | Más de 10 solicitudes por minuto desde la misma IP. |
+| 429 | `COMUN_DEMASIADAS_PETICIONES` | Más de 10 solicitudes por minuto desde la misma IP. |
 
 ## Perfil (self-service)
 
