@@ -42,7 +42,42 @@ Requisitos (ver [Instalación](/integracion/instalacion/) y [Configuración](/in
 | `0.6.0` | Lista plana `{ codigo, nombre, tipo }[]`. **Obsoleta.** |
 | `0.7.0` | Cuentas con sus contratos anidados (la forma descrita en esta guía). |
 
-Los consumidores nuevos deben usar `"@hagemsa/auth-guard": "^0.7.0"`. Con `^0.6.0` npm/pnpm no sube a `0.7.0` (en versiones `0.x` el caret no cruza de minor), así que hay que cambiarlo a mano.
+Los consumidores nuevos deben usar `"@hagemsa/auth-guard": "^0.7.0"`. Con `^0.6.0` npm/pnpm no sube a `0.7.0` (en versiones `0.x` el caret no cruza de minor), así que hay que cambiarlo a mano:
+
+```powershell
+$env:GOOGLE_NPM_TOKEN = (gcloud auth print-access-token)
+pnpm add @hagemsa/auth-guard@^0.7.0
+```
+
+### Si `pnpm add` no encuentra la versión nueva
+
+Síntoma: `ERR_PNPM_NO_MATCHING_VERSION` con *"The latest release of @hagemsa/auth-guard is 0.6.0"*, aunque la versión nueva ya está publicada, y `pnpm view @hagemsa/auth-guard versions` responde **403 Forbidden**.
+
+Causa: pnpm se autentica con un token **vencido** que quedó escrito en algún `.npmrc` (normalmente el del usuario, `$HOME\.npmrc`). Los tokens de `gcloud auth print-access-token` (empiezan con `ya29.`) duran unos 60 minutos. Con el token vencido, el registry responde 403 y pnpm se queda con la lista de versiones que tenía guardada de antes, donde la última es la anterior. Generar un token nuevo en `GOOGLE_NPM_TOKEN` no sirve si el `.npmrc` tiene el viejo escrito a mano.
+
+Solución:
+
+1. Abrir `$HOME\.npmrc` (y el `.npmrc` del repo) y buscar una línea `_authToken=ya29...`.
+2. Reemplazar el valor por la variable, para que se lea en cada install:
+
+   ```ini
+   //us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken=${GOOGLE_NPM_TOKEN}
+   ```
+
+3. Generar el token y volver a instalar:
+
+   ```powershell
+   $env:GOOGLE_NPM_TOKEN = (gcloud auth print-access-token)
+   pnpm add @hagemsa/auth-guard@^0.7.0
+   ```
+
+Para comprobar la credencial sin pnpm (`200` = bien, `403` = token o permiso):
+
+```powershell
+curl.exe -s -o NUL -w "%{http_code}`n" -H "Authorization: Bearer $env:GOOGLE_NPM_TOKEN" "https://us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/@hagemsa%2fauth-guard"
+```
+
+Nunca dejar un token `ya29.` escrito en un `.npmrc`, y menos commitearlo: vence en una hora y es una credencial en claro.
 
 ## Ejemplo de `AuthContext`
 
