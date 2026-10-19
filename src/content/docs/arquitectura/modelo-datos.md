@@ -81,18 +81,26 @@ UNIQUE (account_id, tipo)                        -- un código de cada tipo por 
 
 Vínculo entre una cuenta (identity) y un socio de negocio del BC externo
 **BC01-socio-negocio**. No duplica el maestro del socio: guarda la referencia
-(`socio_externo_id` = personalId de BC01), el tipo y un snapshot de display. Lo
-gestiona un admin (no el usuario).
+(`socio_externo_id` = personalId de BC01), el documento, el tipo y un snapshot
+de BC01 tomado al vincular. Lo gestiona un admin (no el usuario).
 
 ```sql
-id              UUID PRIMARY KEY,
-account_id      UUID UNIQUE NOT NULL,            -- una cuenta ↔ un socio
-socio_externo_id INTEGER UNIQUE NOT NULL,        -- personalId en BC01
-tipo            VARCHAR(20) DEFAULT 'empleado',
-socio_snapshot  JSONB,                           -- foto de display de BC01 (nullable)
-created_at      TIMESTAMPTZ DEFAULT now(),
-updated_at      TIMESTAMPTZ NOT NULL
+id               UUID PRIMARY KEY,
+account_id       UUID UNIQUE NOT NULL,           -- una cuenta ↔ un socio
+socio_externo_id INTEGER NOT NULL,               -- id en BC01; se repite entre personal/cliente/proveedor
+numero_documento VARCHAR(50) NOT NULL,           -- DNI/RUC normalizado (sin espacios, mayúsculas)
+tipo             VARCHAR(20) DEFAULT 'empleado', -- 'empleado' | 'cliente' | 'proveedor'
+socio_snapshot   JSONB,                          -- foto de BC01 al vincular (nullable)
+created_at       TIMESTAMPTZ DEFAULT now(),
+updated_at       TIMESTAMPTZ NOT NULL,
+UNIQUE (numero_documento, tipo)                  -- identidad del socio
 ```
+
+La identidad del socio es (`numero_documento`, `tipo`), no `socio_externo_id`. Del
+vínculo salen `socioDocumento` y `socioTipo` del JWT; del snapshot salen
+`socioNombre` y `socioCuentas` (que los consumidores usan para filtrar datos, así
+que no es solo display). El snapshot se guarda con una lista fija de campos y se
+rechaza (422) si su documento o tipo no coinciden con el vínculo.
 
 > Antes los códigos vivían en `socio_negocio.socio_codes`; la migración
 > `mover-codigos-a-cuenta` (2026-07-09) los movió a `identity.account_codes` y

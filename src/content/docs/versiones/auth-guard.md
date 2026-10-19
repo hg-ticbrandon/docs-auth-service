@@ -19,6 +19,7 @@ pero se publicó el 2026-07-02.
 
 | Versión | Publicada | Qué trae | ¿Rompe algo? |
 | --- | --- | --- | --- |
+| [0.7.0](#070) | **Sin publicar** | `socioCuentas` anidado (cuentas con sus contratos), `socioTipo`, `username` | Sí, el tipo de `socioCuentas` |
 | [0.6.0](#060) | 2026-09-24 | Claim `socioCuentas`: cuentas y contratos del socio en el token | No |
 | [0.5.0](#050) | 2026-07-30 | Endurecimiento: amplificación de JWKS, 500→401, cache acotado | No |
 | [0.4.0](#040) | 2026-07-24 | Tokens "flacos": resuelve `rol → permisos` del catálogo | No, pero ordena el despliegue |
@@ -70,7 +71,7 @@ pnpm why @hagemsa/auth-guard --depth 0
 :::
 
 :::tip[Por qué nadie se actualiza solo]
-La 0.5.0 es la versión `latest`: es la que instala un `pnpm add @hagemsa/auth-guard`
+La 0.6.0 es la versión `latest`: es la que instala un `pnpm add @hagemsa/auth-guard`
 sin versión. Pero los backends que ya tienen `^0.4.0` **no la reciben**: en SemVer
 `0.x` el caret no cruza minors, así que `^0.4.0` significa `>=0.4.0 <0.5.0`. Hay que
 pedirla explícitamente:
@@ -91,6 +92,164 @@ Para ver qué hay publicado realmente:
 gcloud artifacts versions list --package=@hagemsa%2fauth-guard \
   --repository=hagemsa-npm --location=us-central1
 ```
+
+## 0.7.0
+
+:::caution[No publicada]
+El código está en `libs/auth-guard/src/` del repo del Auth Service, pero la
+versión **no se publicó** en Artifact Registry ni se actualizó en ningún
+consumidor. Hasta que se publique, `latest` sigue siendo la que era.
+:::
+
+**Sin fecha** · `socioCuentas` pasa a ser una lista de cuentas, cada una con sus
+contratos anidados.
+
+**¿Hay que hacer algo?** **Sí, si tu código lee `socioCuentas`.** Es un cambio
+**rompiente del tipo** `SocioCuentaJwt`: los campos cambian, así que el código
+escrito contra la forma de 0.6.0 deja de compilar al actualizar. Va como minor y
+no como major porque la librería está en `0.x`, donde el minor es el que marca la
+ruptura. Si no lees `socioCuentas`, actualizar no requiere tocar código.
+
+En la práctica el impacto es nulo: **ningún consumidor lee el claim todavía**. El
+primero en hacerlo (CS Operaciones) arranca directamente con esta forma.
+
+Ojo con quien se quede en 0.6.0: la forma nueva la emite el Auth Service con el
+mismo cambio, pero el consumidor la sigue viendo tipada como la vieja
+(`{ codigo, nombre, tipo }`) hasta que actualice. No lo rompe en runtime —el
+guard pasa el claim tal cual—, pero el tipo miente: no leas `socioCuentas` sin
+estar en 0.7.0.
+
+### Cambiado
+
+**`SocioCuentaJwt`** pasa de `{ codigo, nombre, tipo }` a una cuenta con sus
+contratos:
+
+```ts
+socioCuentas?: readonly SocioCuentaJwt[]
+
+interface SocioCuentaJwt {
+  readonly codigo: string | null   // 'CTA-0001'; null solo en el grupo "sin cuenta"
+  readonly nombre: string | null
+  readonly asignada: boolean       // false: tiene contratos de la cuenta, no la cuenta
+  readonly contratos: readonly SocioContratoJwt[]
+}
+
+interface SocioContratoJwt {
+  readonly codigo: string          // 'CON-0010'
+  readonly nombre: string
+}
+```
+
+```json
+"socioCuentas": [
+  {
+    "codigo": "CTA-0001",
+    "nombre": "CERRO VERDE",
+    "asignada": true,
+    "contratos": [{ "codigo": "CON-0010", "nombre": "CONTRATO SUR" }]
+  },
+  {
+    "codigo": "CTA-0002",
+    "nombre": "ANTAMINA",
+    "asignada": false,
+    "contratos": [{ "codigo": "CON-0020", "nombre": "CONTRATO PLANTA" }]
+  }
+]
+```
+
+Ya no hay `tipo`: lo que es cuenta y lo que es contrato lo dice la estructura.
+
+### Agregado
+
+- **`SocioContratoJwt`**, el tipo de cada contrato, exportado junto a
+  `SocioCuentaJwt`.
+- **`socioTipo` en `JwtPayload` y en `AuthContext`** (`'empleado' | 'cliente' |
+  'proveedor'`). Desambigua `socioExternoId`, que se repite entre las tablas de
+  personal, cliente y proveedor de BC-01. Opcional: los tokens emitidos antes del
+  claim no lo traen.
+- **`username` en `JwtPayload` y en `AuthContext`.** El Auth Service ya lo
+  emitía, pero la librería no lo tipaba ni lo exponía en `@CurrentUser()`.
+  Opcional: no viene en tokens de servicio.
+
+### Migrar desde 0.6.0
+
+Antes se mapeaba la lista plana:
+
+```ts
+// 0.6.0 — ya no compila en 0.7.0
+const codigos = (user.socioCuentas ?? []).map((c) => c.codigo)
+```
+
+Ahora hay que recorrer las cuentas **y** sus contratos, y respetar `asignada`:
+
+```ts
+@Get('opciones-costo')
+@RequirePermission('bc06:viaje:leer')
+async opciones(@CurrentUser() user: AuthContext) {
+  const cuentas = user.socioCuentas ?? []
+
+  // Acceso a la cuenta entera: solo si está asignada.
+  const cuentasCompletas = cuentas
+    .filter((c) => c.asignada && c.codigo !== null)
+    .map((c) => c.codigo as string)
+  // ['CTA-0001']
+
+  // Contratos sueltos: los de cuentas no asignadas y los del grupo sin cuenta.
+  const contratosSueltos = cuentas
+    .filter((c) => !c.asignada || c.codigo === null)
+    .flatMap((c) => c.contratos.map((k) => k.codigo))
+  // ['CON-0020']
+}
+```
+
+Si antes filtrabas por `tipo === 'CONTRATO'`, ahora los contratos están en
+`contratos` de cada cuenta.
+
+### Cinco cosas que hay que saber antes de usarlo
+
+La guía completa para leer el claim está en
+[Datos del usuario y del socio](/integracion/datos-del-usuario/).
+
+**Los códigos son la identidad.** Los genera una secuencia de Configuración
+General (`CTA-####`, `CON-####`) y no se reutilizan: filtra por código, no por
+nombre.
+
+**`asignada: false` no da acceso a la cuenta.** BC-01 permite asignar un
+contrato sin asignar su cuenta. En ese caso la cuenta aparece igual, como grupo
+de sus contratos, con `asignada: false`: el socio tiene **esos contratos**, no
+toda la cuenta. Un contrato siempre cuelga de su cuenta raíz, aunque en el
+maestro su padre sea otro contrato.
+
+**El grupo sin cuenta.** Si BC-01 guardó un contrato sin cuenta raíz, va en un
+grupo con `codigo: null` y `nombre: null`, siempre el último, para que ningún
+contrato se pierda.
+
+**Solo lo vigente, evaluado al emitir.** De BC-01 solo llegan asignaciones
+VIGENTE/APROBADO, y el Auth Service además descarta las cuentas y contratos cuyo
+`vigenteDesde`/`vigenteHasta` no cubren el momento de emisión. Se reevalúa en
+cada login y en cada refresh. Las asignaciones en sí siguen saliendo del snapshot
+tomado al vincular: si BC-01 asigna cuentas nuevas, no aparecen hasta que se
+vuelva a vincular el socio.
+
+**Ausente, nunca vacío.** El claim no viaja si la cuenta no tiene socio, si el
+socio no es empleado (hoy solo PERSONAL tiene cuentas; `cliente` y `proveedor`
+no lo traen) o si no queda nada vigente. `socioCuentas === undefined` sigue
+siendo el único "sin cuentas".
+
+### Relacionado, en el Auth Service
+
+No es cambio de la librería, pero cambia lo que llega en el token:
+
+- **`socioDocumento` sale del propio vínculo** (normalizado), no del snapshot. Es
+  claim de **autorización**, no solo de display: BC05 usa el RUC del proveedor
+  como clave estable de scope.
+- **`socioNombre` y `socioCuentas` salen del snapshot** capturado al vincular.
+- **Al vincular, el snapshot tiene que ser del mismo socio.** Si su documento o su
+  tipo (`PERSONAL` → `empleado`, `CLIENTE` → `cliente`, `PROVEEDOR` →
+  `proveedor`; un tipo desconocido se rechaza) no coinciden con los del vínculo,
+  responde **422** `COMUN_VALIDACION_FALLIDA` con el campo `socioSnapshot`
+  (`VALOR_NO_PERMITIDO`). El snapshot se guarda solo con una lista blanca de
+  campos.
 
 ## 0.6.0
 
@@ -128,7 +287,7 @@ código del consumidor:
 import type { SocioCuentaJwt } from '@hagemsa/auth-guard'
 ```
 
-### Cómo se usa
+### Cómo se usaba
 
 ```ts
 @Get('opciones-costo')
@@ -138,6 +297,12 @@ async opciones(@CurrentUser() user: AuthContext) {
   // codigos: ['CTA-001']
 }
 ```
+
+:::caution[Forma reemplazada en 0.7.0]
+Esta lista plana es la forma de 0.6.0. En 0.7.0 `socioCuentas` pasa a ser una
+lista de cuentas con sus contratos anidados y este código deja de compilar. Ver
+[Migrar desde 0.6.0](#migrar-desde-060).
+:::
 
 ### Tres cosas que hay que saber antes de usarlo
 
@@ -157,6 +322,9 @@ un administrador vuelva a vincular ese socio desde la ficha de la cuenta. Si
 se necesita el estado actual, el token no alcanza: hay que consultarle a BC-01.
 
 ### `tipo` es dato de display, nunca de autorización
+
+*(Solo 0.6.0: en 0.7.0 `tipo` desaparece y la estructura dice qué es cuenta y qué
+contrato.)*
 
 Distingue una CUENTA de un CONTRATO para poder mostrarlo o agrupar. **No** se
 usa —ni debe usarse— para decidir si alguien puede hacer algo. Para eso están los

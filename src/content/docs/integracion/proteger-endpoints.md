@@ -89,10 +89,13 @@ export class PerfilController {
 
 `AuthContext` también expone `name`, `jti`, `expiresAt` y estos campos opcionales:
 
+- `username` — nombre de usuario de la cuenta. Ausente en tokens de servicio. Expuesto desde 0.7.0.
 - `codigoSocio` y `codigoCuenta` — códigos internos de la **cuenta** (para generación de códigos en PDFs), alfanuméricos de 1 a 20. Presentes solo si la cuenta los tiene seteados. **Son independientes del socio**: una cuenta puede tener códigos sin estar vinculada a BC01.
-- `socioExternoId`, `socioNombre` y `socioDocumento` — presentes **solo si la cuenta está vinculada a un socio de negocio (BC01)**; los dos últimos vienen del snapshot capturado al vincular.
+- `socioExternoId`, `socioTipo`, `socioNombre`, `socioDocumento` y `socioCuentas` — presentes **solo si la cuenta está vinculada a un socio de negocio (BC01)**. `socioExternoId` se repite entre las tablas de BC01, así que se lee siempre junto con `socioTipo` (`empleado`, `cliente` o `proveedor`). `socioDocumento` sale del propio vínculo (normalizado) y **sirve para autorizar** (p. ej. el RUC del proveedor como clave de scope); `socioNombre` y `socioCuentas` salen del snapshot capturado al vincular. Significado de cada campo en [Datos del usuario y del socio](/integracion/datos-del-usuario/).
 
 En cuentas sin códigos / sin socio, los campos respectivos llegan como `undefined`.
+
+Para filtrar por las cuentas y contratos del socio (`socioCuentas`, respetando `asignada`) ver [Datos del usuario y del socio](/integracion/datos-del-usuario/).
 
 ## @RequirePermission
 

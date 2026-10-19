@@ -180,7 +180,7 @@ regenera el lockfile:
 # genera el token primero (igual que en el install)
 export GOOGLE_NPM_TOKEN="$(gcloud auth print-access-token)"   # PowerShell: $env:GOOGLE_NPM_TOKEN = (gcloud auth print-access-token)
 
-pnpm add @hagemsa/auth-guard@0.3.1     # sube package.json + pnpm-lock.yaml
+pnpm add @hagemsa/auth-guard@0.6.0     # sube package.json + pnpm-lock.yaml
 ```
 
 Después **redeploya** tu backend (ej. `gcloud builds submit ...`). El build corre
@@ -198,7 +198,9 @@ backend los necesita, instala `@hagemsa/auth-guard@^0.2.0`:
 - `socioExternoId`, `socioNombre`, `socioDocumento` — presentes solo si la cuenta
   tiene un socio de BC01 vinculado.
 
-En cuentas sin códigos / sin socio, llegan como `undefined`.
+En cuentas sin códigos / sin socio, llegan como `undefined`. Versiones
+posteriores agregan `socioCuentas` (0.6.0) y `socioTipo` / `username` (0.7.0):
+ver la nota de 0.7.0 más abajo.
 :::
 
 :::note[Versión 0.3.0 — M2M / tokens de servicio]
@@ -251,6 +253,21 @@ Cambios **aditivos y retrocompatibles**:
 - **Orden de despliegue:** actualiza a `^0.4.0` en TODOS los backends **antes** de
   que el Auth Service pase a emitir tokens flacos. Ver
   [Configuración → Con tokens flacos](/integracion/configuracion/#con-tokens-flacos).
+:::
+
+:::caution[Versión 0.7.0 — `socioCuentas` anidado (aún no publicada)]
+La **0.7.0 todavía no está publicada** en Artifact Registry. Cuando salga:
+
+- `socioCuentas` cambia de forma (**rompe el tipo** respecto de 0.6.0): pasa de
+  una lista plana `{ codigo, nombre, tipo }[]` a cuentas con sus contratos
+  anidados, `{ codigo, nombre, asignada, contratos }[]`.
+- Agrega `socioTipo` (`empleado`, `cliente` o `proveedor`) y `username` a
+  `JwtPayload` y `AuthContext`.
+
+La forma nueva la emite el Auth Service con el mismo cambio, así que en cuanto
+ese despliegue salga, un backend en 0.6.0 recibe `socioCuentas` con un tipo que
+no coincide. Si tu backend lee `socioCuentas`, hazlo ya en 0.7.0. Detalle
+y migración en [Versiones → 0.7.0](/versiones/auth-guard/#070).
 :::
 
 ## 2. Variables de entorno

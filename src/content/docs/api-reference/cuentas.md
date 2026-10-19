@@ -34,7 +34,7 @@ Content-Type: application/json
 **Campos opcionales adicionales:**
 
 - `codigoSocio`, `codigoCuenta` — códigos internos de la cuenta (1-20 alfanuméricos, "todo o nada"). Independientes del socio. También los puede editar el propio usuario luego desde [su perfil](/api-reference/auth/#patch-apiauthperfilcodigos).
-- `socioExternoId` (entero), `tipoSocio` (`empleado` \| `cliente` \| `proveedor`), `socioSnapshot` (objeto de BC01) — vinculan la cuenta a un socio de negocio de BC01. Independientes de los códigos.
+- `socioExternoId` (entero), `numeroDocumento` (DNI/RUC del socio), `tipoSocio` (`empleado` \| `cliente` \| `proveedor`), `socioSnapshot` (objeto de BC01) — vinculan la cuenta a un socio de negocio de BC01. Independientes de los códigos. Si el snapshot trae documento o tipo y no coinciden con `numeroDocumento` / `tipoSocio`, responde `422` y no se crea la cuenta.
 
 ```json
 {
@@ -200,14 +200,16 @@ Requiere `auth:account:write`.
 ```json
 {
   "socioExternoId": 145,
+  "numeroDocumento": "12345678",
   "tipoSocio": "empleado",
-  "socioSnapshot": { "…": "objeto completo de BC01" }
+  "socioSnapshot": { "…": "objeto de BC01" }
 }
 ```
 
-- `socioExternoId` (obligatorio): `personalId` del socio en BC01.
+- `socioExternoId` (obligatorio): id del socio en BC01. Referencia para sus endpoints, **no identidad**: el mismo número se repite entre las tablas de personal, cliente y proveedor.
+- `numeroDocumento` (obligatorio): DNI, RUC o documento extranjero, solo letras y números, hasta 50. Junto con `tipoSocio` es la **identidad** del vínculo. Se guarda normalizado y es lo que viaja en el token como `socioDocumento`.
 - `tipoSocio` (opcional): `empleado` \| `cliente` \| `proveedor` (default `empleado`).
-- `socioSnapshot` (opcional): objeto de BC01 para denormalizar nombre/documento.
+- `socioSnapshot` (opcional): objeto de BC01 capturado al vincular. De él salen `socioNombre` y `socioCuentas` del token. Se guarda solo con una lista blanca de campos. Si trae documento o tipo (`PERSONAL` → `empleado`, `CLIENTE` → `cliente`, `PROVEEDOR` → `proveedor`), tienen que coincidir con los del vínculo; un tipo desconocido se rechaza.
 
 **Response 204** (sin body).
 
@@ -217,6 +219,7 @@ Requiere `auth:account:write`.
 |---|---|---|
 | 409 | `AUTH_SOCIO_YA_VINCULADO` | La cuenta ya tiene socio, o el socio ya está vinculado a otra cuenta (mismo código para ambos). |
 | 404 | `AUTH_CUENTA_NO_ENCONTRADA` | El id no corresponde a una cuenta. |
+| 422 | `COMUN_VALIDACION_FALLIDA` | El documento o el tipo del `socioSnapshot` no coinciden con los del vínculo (`errores[].campo = "socioSnapshot"`, `codigo = "VALOR_NO_PERMITIDO"`). |
 
 ## DELETE /api/admin/cuentas/:id
 

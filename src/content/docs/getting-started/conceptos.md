@@ -32,8 +32,28 @@ Token firmado que prueba quién es el usuario. Se compone de 3 partes (header, p
   "codigoSocio": "BA",
   "codigoCuenta": "C1",
   "socioExternoId": 145,
+  "socioTipo": "empleado",
   "socioNombre": "Juan Pérez",
   "socioDocumento": "12345678",
+  "socioCuentas": [
+    {
+      "codigo": "CTA-0001",
+      "nombre": "CERRO VERDE",
+      "asignada": true,
+      "contratos": [
+        { "codigo": "CON-0010", "nombre": "CONTRATO SUR" },
+        { "codigo": "CON-0011", "nombre": "CONTRATO NORTE" }
+      ]
+    },
+    {
+      "codigo": "CTA-0002",
+      "nombre": "ANTAMINA",
+      "asignada": false,
+      "contratos": [
+        { "codigo": "CON-0020", "nombre": "CONTRATO PLANTA" }
+      ]
+    }
+  ],
   "iss": "https://auth.hagemsa.com",
   "aud": "hagemsa-backends",
   "exp": 1779722400,
@@ -53,21 +73,30 @@ Token firmado que prueba quién es el usuario. Se compone de 3 partes (header, p
 | `tokenUse` | siempre* | `user` (usuario final) o `service` (M2M). *Ausente en tokens emitidos antes de existir M2M → se trata como `user`. |
 | `clientId` | solo en tokens de servicio | `clientId` del cliente de servicio que pidió el token. |
 | `email` | solo tokens de usuario | Correo de la cuenta. Ausente en tokens de servicio. |
-| `username` | siempre* | Nombre de usuario (login alterno). *Puede faltar en tokens emitidos antes de habilitar login por usuario. |
+| `username` | solo tokens de usuario* | Nombre de usuario (login alterno). Ausente en tokens de servicio. *Puede faltar en tokens emitidos antes de habilitar login por usuario. `@hagemsa/auth-guard` lo tipa y lo expone en `@CurrentUser()` desde 0.7.0. |
 | `type` | solo tokens de usuario | `TipoCuenta`: `interno` \| `cliente` \| `proveedor`. Ausente en tokens de servicio. |
 | `name` | solo tokens de usuario | Nombre completo. Ausente en tokens de servicio. |
 | `jti` | siempre | ID de la sesión (para blacklist/revocación). |
 | `roles` | siempre | Array de `{ role, scope, permisos[] }` con los permisos embebidos. |
 | `codigoSocio` | solo si la cuenta tiene códigos | Código interno de la cuenta, 1-20 alfanuméricos. Para generación de códigos en PDFs. **Independiente del socio.** |
 | `codigoCuenta` | solo si la cuenta tiene códigos | Segundo código interno de la cuenta, 1-20 alfanuméricos. **Independiente del socio.** |
-| `socioExternoId` | solo si hay socio | `personalId` del socio en BC01-socio-negocio. |
-| `socioNombre` | solo si hay socio | Nombre del socio (del snapshot BC01) — para display sin llamar a BC01. |
-| `socioDocumento` | solo si hay socio | Documento del socio (del snapshot BC01). |
+| `socioExternoId` | solo si hay socio | Id del socio en BC01-socio-negocio (`personalId` en el caso de un empleado). **No es único por sí solo**: el mismo número se repite entre las tablas de personal, cliente y proveedor de BC01; se lee junto con `socioTipo`. |
+| `socioTipo` | solo si hay socio* | `empleado` \| `cliente` \| `proveedor`. Desambigua `socioExternoId`. *Ausente en tokens emitidos antes de existir el claim. |
+| `socioNombre` | solo si hay socio | Nombre del socio, tomado del snapshot capturado al vincular — para display sin llamar a BC01. |
+| `socioDocumento` | solo si hay socio | Documento del socio (DNI, RUC o documento extranjero), tomado **del propio vínculo** y normalizado (sin espacios, en mayúsculas). **Es claim de autorización**, no solo de display: p. ej. BC05 usa el RUC del proveedor como clave estable de scope. |
+| `socioCuentas` | solo si hay socio con cuentas vigentes | Cuentas de BC01 del socio, cada una con sus contratos anidados: `{ codigo, nombre, asignada, contratos: { codigo, nombre }[] }[]`. Ver [Datos del usuario y del socio](/integracion/datos-del-usuario/). Forma vigente desde `@hagemsa/auth-guard` 0.7.0. |
 | `iss` / `aud` / `exp` / `iat` | siempre | Estándar JWT (emisor, audiencia, expiración, emitido-en). |
 
 > **Códigos vs. socio son independientes.** `codigoSocio` y `codigoCuenta` son atributos de la **cuenta** (los edita el propio usuario desde su perfil) y aparecen si la cuenta los tiene seteados — **sin importar si hay un socio vinculado**. Son "todo o nada" (ambos o ninguno) y alfanuméricos de 1 a 20 caracteres.
 >
-> Los campos `socioExternoId`, `socioNombre` y `socioDocumento` aparecen **solo cuando la cuenta está vinculada a un socio de negocio (BC01)** (vínculo que gestiona un admin). El nombre/documento provienen de un **snapshot** capturado al vincular (puede quedar desactualizado si BC01 cambia; se refresca al re-vincular). BC01 sigue siendo la fuente de verdad para el maestro completo.
+> Los campos `socio*` aparecen **solo cuando la cuenta está vinculada a un socio de negocio (BC01)** (vínculo que gestiona un admin). El auth service **no consulta a BC01 al emitir el token**:
+>
+> - `socioDocumento` y `socioTipo` salen **del propio vínculo**: el par (documento, tipo) es su identidad.
+> - `socioNombre` y `socioCuentas` salen de un **snapshot** capturado al vincular (puede quedar desactualizado si BC01 cambia; se refresca al re-vincular o cambiar el socio).
+>
+> Al vincular, si el snapshot trae documento o tipo, tienen que coincidir con los del vínculo (`PERSONAL` → `empleado`, `CLIENTE` → `cliente`, `PROVEEDOR` → `proveedor`); si no, el auth service responde **422** `COMUN_VALIDACION_FALLIDA` con el campo `socioSnapshot`. BC01 sigue siendo la fuente de verdad para el maestro completo.
+
+> Qué significa cada campo del socio —en especial `socioCuentas` y `asignada`— y cómo leerlos desde un backend está en [Datos del usuario y del socio](/integracion/datos-del-usuario/).
 
 > **Tokens de servicio (M2M).** Además de los tokens de usuario, el Auth Service emite **tokens de servicio** (grant client credentials) para comunicación backend-a-backend. Se distinguen por `tokenUse: "service"` y traen `clientId` en vez de los datos de usuario (`email`/`name`/`type` no aparecen). Llevan `roles[]` con permisos embebidos igual que un token de usuario, así los guards los autorizan sin round-trip. Ver [Comunicación backend-a-backend (M2M)](/integracion/m2m/).
 

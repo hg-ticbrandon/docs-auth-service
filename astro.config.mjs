@@ -37,6 +37,7 @@ export default defineConfig({
             { label: 'Instalación', slug: 'integracion/instalacion' },
             { label: 'Configuración', slug: 'integracion/configuracion' },
             { label: 'Proteger endpoints', slug: 'integracion/proteger-endpoints' },
+            { label: 'Datos del usuario y del socio', slug: 'integracion/datos-del-usuario' },
             { label: 'Permisos y scopes', slug: 'integracion/permisos-scopes' },
             { label: 'Backend-a-backend (M2M)', slug: 'integracion/m2m' },
             { label: 'Ejemplo end-to-end (M2M)', slug: 'integracion/m2m-ejemplo' },
