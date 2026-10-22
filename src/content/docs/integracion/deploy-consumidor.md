@@ -141,11 +141,12 @@ funciona — pero es una bomba de tiempo: en cuanto pnpm suba (o uses `pnpm@late
 el build rompe.
 :::
 
-**Para desarrollo local**, el token va a tu `~/.npmrc` de usuario. `pnpm config set`
-lo escribe ahí:
+**Para desarrollo local**, el token va a tu configuración de usuario, fuera del repo
+(desde pnpm 12, el `auth.ini` de la config global de pnpm; antes, `~/.npmrc`).
+`pnpm config set --location=global` lo escribe ahí:
 
 ```bash
-pnpm config set "//us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken" "$(gcloud auth print-access-token)"
+pnpm config set --location=global "//us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken" "$(gcloud auth print-access-token)"
 ```
 
 > El token de `gcloud` **caduca en ~1h**: cuando vuelvas a ver un `403`, repite ese

@@ -20,12 +20,16 @@ el scope `@hagemsa`, **sin token**:
 //us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:always-auth=true
 ```
 
-**b) El token, en tu `~/.npmrc` de usuario.** No lo edites a mano: `pnpm config set`
-escribe ahí:
+**b) El token, en tu configuración de usuario.** No lo edites a mano: lo escribe
+`pnpm config set --location=global`:
 
 ```bash
-pnpm config set "//us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken" "$(gcloud auth print-access-token)"
+pnpm config set --location=global "//us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken" "$(gcloud auth print-access-token)"
 ```
+
+Dónde queda depende de la versión de pnpm: desde **pnpm 12** va al `auth.ini` de la
+config global de pnpm (en Windows, `%LOCALAPPDATA%\pnpm\config\auth.ini`); con
+versiones anteriores, a tu `~/.npmrc`. En ambos casos fuera del repo.
 
 :::danger[El token NO va en el `.npmrc` del proyecto]
 Desde **pnpm 11.11**, una credencial con `${VARIABLE}` en el `.npmrc` **del proyecto**
@@ -40,7 +44,8 @@ pnpm config set
 ```
 
 Y el install muere con `ERR_PNPM_FETCH_403` **aunque el token sea válido y esté
-presente**. Si te pasa: no busques un token faltante — muévelo al `~/.npmrc`.
+presente**. Si te pasa: no busques un token faltante — sácalo del `.npmrc` del
+proyecto y guárdalo con `pnpm config set --location=global` (paso b).
 
 (Con pnpm anterior a 11.11 el token en el `.npmrc` del proyecto todavía funciona, pero
 rompe en cuanto pnpm suba de versión.)
@@ -89,26 +94,28 @@ gcloud auth print-access-token
 
 ### 1.3 Autenticarte e instalar
 
-Guarda el token en tu `~/.npmrc` de usuario con `pnpm config set`, y después instala:
+Guarda el token en tu configuración de usuario con `pnpm config set --location=global`,
+y después instala:
 
 ```bash
-pnpm config set "//us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken" "$(gcloud auth print-access-token)"
+pnpm config set --location=global "//us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken" "$(gcloud auth print-access-token)"
 pnpm add @hagemsa/auth-guard
 ```
 
 En **PowerShell** es igual (la sustitución `$(...)` también funciona):
 
 ```powershell
-pnpm config set "//us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken" "$(gcloud auth print-access-token)"
+pnpm config set --location=global "//us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken" "$(gcloud auth print-access-token)"
 pnpm add @hagemsa/auth-guard
 ```
 
 **Qué hace esa línea:** `gcloud auth print-access-token` genera un token OAuth nuevo, y
-`pnpm config set` lo **escribe en tu `~/.npmrc`** (el de usuario, fuera del repo). A
-diferencia de una variable de entorno, **persiste entre terminales**: no hay que
-repetirlo en cada sesión, solo cuando el token caduca.
+`pnpm config set --location=global` lo **escribe en tu config de usuario** (fuera del
+repo; ver 1.1 b). A diferencia de una variable de entorno, **persiste entre
+terminales**: no hay que repetirlo en cada sesión, solo cuando el token caduca.
 
-> **El token dura ~1 hora.** Cuando un `install` falle con `401`/`403`, vuelve a correr
+> **El token dura ~1 hora.** Cuando un `install` falle con `401`/`403` sobre
+> `@hagemsa/auth-guard`, vuelve a correr
 > el `pnpm config set` (regenera y reescribe). No hace falta `gcloud auth login` de
 > nuevo salvo que la sesión de gcloud haya expirado.
 
@@ -177,8 +184,8 @@ tienes y quieres **subir de versión** (o fijar una concreta), pasa la versión 
 regenera el lockfile:
 
 ```bash
-# genera el token primero (igual que en el install)
-export GOOGLE_NPM_TOKEN="$(gcloud auth print-access-token)"   # PowerShell: $env:GOOGLE_NPM_TOKEN = (gcloud auth print-access-token)
+# refresca el token primero (igual que en el install)
+pnpm config set --location=global "//us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken" "$(gcloud auth print-access-token)"
 
 pnpm add @hagemsa/auth-guard@0.6.0     # sube package.json + pnpm-lock.yaml
 ```

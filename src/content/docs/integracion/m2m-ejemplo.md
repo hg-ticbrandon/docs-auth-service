@@ -152,7 +152,7 @@ WMS_URL=https://wms.hagemsa.com
 ## Paso 4 — (Flota) Instalar y configurar la lib
 
 ```bash
-export GOOGLE_NPM_TOKEN="$(gcloud auth print-access-token)"
+pnpm config set --location=global "//us-central1-npm.pkg.dev/hagemsa-cloud/hagemsa-npm/:_authToken" "$(gcloud auth print-access-token)"
 pnpm add @hagemsa/auth-guard@^0.3.1
 ```
 
