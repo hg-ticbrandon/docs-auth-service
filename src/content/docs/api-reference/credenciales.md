@@ -46,7 +46,7 @@ Content-Type: application/json
 
 Genera una **password temporal** y la devuelve UNA SOLA VEZ en la respuesta. El admin la comunica al usuario por canal seguro (verbal, mensaje cifrado). El usuario debe cambiarla en su próximo login.
 
-Diferente del endpoint público `/api/auth/forgot-password` (que dispara email): este lo ejecuta un admin sobre cualquier cuenta y devuelve la password directamente.
+Diferente del endpoint público `/api/auth/forgot-password` (que dispara email): este lo ejecuta un admin sobre cualquier cuenta y devuelve la password directamente. Es la vía para recuperar una cuenta **sin correo asignado**, que no puede usar `forgot-password`.
 
 **Request:**
 

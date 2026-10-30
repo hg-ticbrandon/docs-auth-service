@@ -17,6 +17,7 @@ description: Problemas frecuentes integrando @hagemsa/auth-guard y cómo resolve
 | `AUTH_NOMBRE_USUARIO_YA_REGISTRADO` | 409 | Ya existe una cuenta con ese nombre de usuario. |
 | `AUTH_NOMBRE_USUARIO_INVALIDO` | 400 | Nombre de usuario con formato inválido. |
 | `AUTH_CUENTA_BLOQUEADA` | 423 | Cuenta bloqueada por intentos fallidos. |
+| `AUTH_CUENTA_SIN_CORREO` | 409 | `forgot-password` sobre una cuenta activa sin correo asignado. Mostrar el `detalle` (indica comunicarse con TIC). |
 | `AUTH_TOKEN_INVALIDO` | 401 | Refresh token inválido, expirado o consumido. |
 | `AUTH_TOKEN_REUSADO` | 401 | Reuso detectado → toda la familia de tokens revocada. El usuario debe hacer login. |
 | `AUTH_SESION_REVOCADA` | 401 | El JWT pertenece a una sesión revocada (vía blacklist). |

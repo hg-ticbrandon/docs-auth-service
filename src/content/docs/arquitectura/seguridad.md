@@ -18,6 +18,8 @@ Estas reglas son **absolutas** (ver `CLAUDE.md §5.3` en el repo). Si te encuent
 | 7 | **NUNCA exponer info que permita enumerar cuentas.** `"Credenciales inválidas"` genérico, no `"email no existe"` |
 | 8 | **El audit log es append-only.** Nunca UPDATE ni DELETE en `audit.auth_events` |
 
+> **Excepción deliberada a la regla 7:** `POST /api/auth/forgot-password` responde `409` `AUTH_CUENTA_SIN_CORREO` cuando la cuenta está **activa** y no tiene correo, lo que confirma que el nombre de usuario existe. Se aceptó para que el usuario sepa que debe ir a TIC en vez de esperar un correo que nunca llega. Se limita a cuentas activas sin correo; todo lo demás sigue respondiendo `202` genérico. Ver [forgot-password](/api-reference/auth/#post-apiauthforgot-password).
+
 ## Password hashing — Argon2id
 
 - Algoritmo: `argon2id` (RFC 9106).

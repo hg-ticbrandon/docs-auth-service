@@ -129,7 +129,7 @@ Usuario interno vinculado a un empleado de BC01:
 | Campo | Tipo | Significado |
 |---|---|---|
 | `accountId` | `string` | Id de la cuenta en el Auth Service (UUID). En el JWT es `sub`. |
-| `email` | `string` | Email de la cuenta. Vacío en tokens de servicio. |
+| `email` | `string` | Email de la cuenta. Vacío (`''`) en tokens de servicio y en cuentas sin correo asignado. |
 | `username` | `string?` | Nombre de usuario: la llave con la que inicia sesión. Ausente en tokens de servicio. |
 | `type` | `string` | Tipo de cuenta: `interno`, `cliente` o `proveedor`. |
 | `name` | `string` | Nombre completo de la cuenta. |

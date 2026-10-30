@@ -29,7 +29,9 @@ Content-Type: application/json
 
 > `nombreUsuario` es **obligatorio y único**: 3-30 caracteres, empieza con letra, solo letras, dígitos, punto, guion o guion bajo (sin `@`). Se normaliza a minúsculas y es **inmutable**. Sirve como identificador alternativo al email en el login.
 >
-> `documentoIdentidad` es **opcional** (string, máximo 50 caracteres). Los demás campos (`email`, `nombreUsuario`, `nombreCompleto`, `tipoCuenta`) son obligatorios.
+> `email` es **opcional** y **no es único** (varias cuentas pueden compartir casilla). Si viene, se valida el formato (máximo 255). Vacío o solo espacios se trata como ausente: la cuenta queda sin correo (`null`). Una cuenta sin correo no puede recuperar su password por sí misma (ver [`forgot-password`](/api-reference/auth/#post-apiauthforgot-password)); se recupera con un [reset administrativo](/api-reference/credenciales/#post-apiadmincuentasidreset-password).
+>
+> `documentoIdentidad` es **opcional** (string, máximo 50 caracteres). Los demás campos (`nombreUsuario`, `nombreCompleto`, `tipoCuenta`) son obligatorios.
 
 **Campos opcionales adicionales:**
 
@@ -63,7 +65,6 @@ Content-Type: application/json
 | HTTP | `codigo` | Cuándo |
 |---|---|---|
 | 422 | `COMUN_VALIDACION_FALLIDA` | DTO inválido (con array `errores` por campo; incluye formato de `nombreUsuario`). |
-| 409 | `AUTH_EMAIL_YA_REGISTRADO` | Ya existe una cuenta con ese email. |
 | 409 | `AUTH_NOMBRE_USUARIO_YA_REGISTRADO` | Ya existe una cuenta con ese nombre de usuario. |
 | 403 | `COMUN_SIN_PERMISO` | JWT sin permiso `auth:account:write`. |
 
@@ -118,6 +119,8 @@ Authorization: Bearer <jwt>
 
 Lista vacía: `datos: []`, `total: 0`, status `200`.
 
+> `email` es `string | null`: `null` si la cuenta no tiene correo asignado. Lo mismo en el detalle.
+
 ## GET /api/admin/cuentas/:id
 
 Detalle de una cuenta. Requiere `auth:account:read`.
@@ -144,16 +147,19 @@ Detalle de una cuenta. Requiere `auth:account:read`.
 
 ## PATCH /api/admin/cuentas/:id
 
-Actualiza nombre o documento de identidad. Requiere `auth:account:write`.
+Actualiza email, nombre o documento de identidad. Requiere `auth:account:write`.
 
 **Request:**
 
 ```json
 {
+  "email": "nuevo@hagemsa.com",
   "nombreCompleto": "Nuevo Nombre",
   "documentoIdentidad": "12345678"
 }
 ```
+
+> `email`: **ausente** = no se toca; **`null` o vacío** = se quita el correo; **string** = se cambia (valida formato, no unicidad). Todo cambio real del correo —incluido agregarlo o quitarlo— queda auditado como `email_cambiado` con `{ anterior, nuevo }` (`anterior: null` al agregarlo, `nuevo: null` al quitarlo).
 
 **Response 204** (sin body).
 

@@ -10,7 +10,7 @@ El proyecto sigue una regla estricta: **el dominio se escribe en español, lo t�
 | Término del negocio | En código |
 |---|---|
 | Cuenta | `Cuenta` (aggregate root) |
-| Email | `Email` (value object) |
+| Email | `Email` (value object — opcional en la cuenta y no único) |
 | Nombre de usuario | `NombreUsuario` (value object — login alternativo al email, único e inmutable) |
 | Tipo de cuenta | `TipoCuenta` (`'interno'`, `'cliente'`, `'proveedor'`) |
 | Estado de cuenta | `EstadoCuenta` (`'activo'`, `'suspendido'`, `'inactivo'`) |

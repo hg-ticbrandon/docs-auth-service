@@ -41,7 +41,7 @@ PostgreSQL 18 con **multi-schema**: 7 schemas, 16 tablas.
 
 ```sql
 id                   UUID PRIMARY KEY,
-email                VARCHAR(255) UNIQUE NOT NULL,
+email                VARCHAR(255),                -- opcional y no único
 username             VARCHAR(30) UNIQUE NOT NULL,
 account_type         VARCHAR(20) NOT NULL CHECK (account_type IN ('interno', 'cliente', 'proveedor')),
 status               VARCHAR(20) DEFAULT 'activo' CHECK (status IN ('activo', 'suspendido', 'inactivo')),
@@ -54,6 +54,8 @@ created_by           UUID
 
 **Índices:** `email`, `username` (único), `status`, `account_type`.
 
+> `email` es **opcional** y **no único**: varias cuentas pueden compartir casilla, y una cuenta sin correo guarda `NULL` (nunca `''`). Se hizo nullable en la migración `20261029120000_email_opcional`. Sin correo la cuenta no puede recuperar su password por sí misma; TIC la recupera con un reset administrativo.
+>
 > `username` es el nombre de usuario para login (alternativa al email). Único, inmutable, validado en el dominio por el value object `NombreUsuario` (3-30 chars, empieza con letra, `[a-z0-9._-]`, sin `@`).
 
 ### identity.account_codes

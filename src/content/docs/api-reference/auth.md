@@ -105,7 +105,7 @@ Authorization: Bearer <accessToken>
 
 ## POST /api/auth/forgot-password
 
-Inicia el flujo de recuperación. Si el email existe, se envía un correo con un link al `PASSWORD_RESET_LINK` configurado.
+Inicia el flujo de recuperación a partir del **nombre de usuario** (no del email, que no es único). Si la cuenta existe, se envía un correo al email de esa cuenta con un link al `PASSWORD_RESET_LINK` configurado.
 
 **Request:**
 
@@ -113,19 +113,26 @@ Inicia el flujo de recuperación. Si el email existe, se envía un correo con un
 POST /api/auth/forgot-password
 Content-Type: application/json
 
-{ "email": "juan@hagemsa.com" }
+{ "nombreUsuario": "juan.perez" }
 ```
 
 **Response 202 Accepted** (sin body, exista o no la cuenta — no enumeramos).
 
-El frontend muestra siempre el mismo mensaje genérico al usuario ("Si el email está registrado, recibirás un link").
+El frontend muestra siempre el mismo mensaje genérico al usuario ("Si el usuario existe, recibirás un link").
+
+:::caution[Excepción: cuenta activa sin correo]
+Si la cuenta está **activa** y **no tiene correo** asignado, responde `409` `AUTH_CUENTA_SIN_CORREO` con el detalle *"Tu cuenta no tiene un correo asignado para recuperar la contraseña. Comunícate con el área de TIC."* No se emite token ni se envía nada; se audita `password_reset_solicitado` con metadata `{ "sinCorreo": true }`.
+
+Es una excepción deliberada a la regla de no enumerar: confirma que el usuario existe, pero solo para cuentas activas sin correo, a cambio de que el usuario sepa a quién acudir. Una cuenta suspendida o inactiva sin correo sigue respondiendo `202` en silencio. TIC la recupera con el [reset administrativo](/api-reference/credenciales/#post-apiadmincuentasidreset-password).
+:::
 
 **Errores:**
 
 | HTTP | `codigo` | Cuándo |
 |---|---|---|
-| 422 | `COMUN_VALIDACION_FALLIDA` | Email mal formado. |
-| 429 | `COMUN_DEMASIADAS_PETICIONES` | Más de 3 intentos por minuto desde la misma IP. |
+| 409 | `AUTH_CUENTA_SIN_CORREO` | Cuenta activa sin correo asignado (ver arriba). |
+| 422 | `COMUN_VALIDACION_FALLIDA` | `nombreUsuario` vacío o de más de 30 caracteres. |
+| 429 | `COMUN_DEMASIADAS_PETICIONES` | Más de 3 intentos por minuto para el mismo nombre de usuario. |
 
 ## POST /api/auth/reset-password
 
@@ -247,6 +254,7 @@ Authorization: Bearer <accessToken>
 }
 ```
 
+> `email` es `null` si la cuenta no tiene correo asignado.
 > `codigoSocio` / `codigoCuenta` son `null` si la cuenta no tiene códigos. `socio`
 > aparece solo si la cuenta está vinculada a un socio de BC01.
 

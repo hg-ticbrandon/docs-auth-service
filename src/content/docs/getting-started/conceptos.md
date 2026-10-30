@@ -72,7 +72,7 @@ Token firmado que prueba quién es el usuario. Se compone de 3 partes (header, p
 | `sub` | siempre | ID de la cuenta (uuid). En tokens de servicio, el `clientId`. |
 | `tokenUse` | siempre* | `user` (usuario final) o `service` (M2M). *Ausente en tokens emitidos antes de existir M2M → se trata como `user`. |
 | `clientId` | solo en tokens de servicio | `clientId` del cliente de servicio que pidió el token. |
-| `email` | solo tokens de usuario | Correo de la cuenta. Ausente en tokens de servicio. |
+| `email` | solo tokens de usuario | Correo de la cuenta; `''` si la cuenta no tiene correo asignado. Ausente en tokens de servicio. |
 | `username` | solo tokens de usuario* | Nombre de usuario (login alterno). Ausente en tokens de servicio. *Puede faltar en tokens emitidos antes de habilitar login por usuario. `@hagemsa/auth-guard` lo tipa y lo expone en `@CurrentUser()` desde 0.7.0. |
 | `type` | solo tokens de usuario | `TipoCuenta`: `interno` \| `cliente` \| `proveedor`. Ausente en tokens de servicio. |
 | `name` | solo tokens de usuario | Nombre completo. Ausente en tokens de servicio. |
