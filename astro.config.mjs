@@ -56,6 +56,7 @@ export default defineConfig({
           items: [
             { label: 'Convenciones', slug: 'api-reference/convenciones' },
             { label: 'Autenticación', slug: 'api-reference/auth' },
+            { label: 'Perfil del usuario', slug: 'api-reference/perfil' },
             { label: 'Cuentas (admin)', slug: 'api-reference/cuentas' },
             { label: 'Credenciales (admin)', slug: 'api-reference/credenciales' },
             { label: 'Roles (admin)', slug: 'api-reference/roles' },

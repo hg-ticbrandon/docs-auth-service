@@ -217,46 +217,9 @@ editar **su** perfil.
 
 ### GET /api/auth/perfil
 
-Devuelve los datos de la cuenta autenticada, incluidos sus códigos internos y —
-si tiene— el socio de negocio (BC01) vinculado.
-
-**Request:**
-
-```http
-GET /api/auth/perfil
-Authorization: Bearer <accessToken>
-```
-
-**Response 200:**
-
-```json
-{
-  "datos": {
-    "id": "8c1d...e9",
-    "email": "juan@hagemsa.com",
-    "nombreUsuario": "juanperez",
-    "nombreCompleto": "Juan Pérez",
-    "tipoCuenta": "interno",
-    "estado": "activo",
-    "documentoIdentidad": "12345678",
-    "codigoSocio": "BA",
-    "codigoCuenta": "C1",
-    "createdAt": "2026-05-26T16:45:12.123Z",
-    "updatedAt": "2026-07-09T16:15:25.888Z",
-    "socio": {
-      "socioExternoId": 145,
-      "tipo": "empleado",
-      "nombre": "Juan Pérez",
-      "documento": "12345678",
-      "snapshot": { "…": "objeto completo de BC01" }
-    }
-  }
-}
-```
-
-> `email` es `null` si la cuenta no tiene correo asignado.
-> `codigoSocio` / `codigoCuenta` son `null` si la cuenta no tiene códigos. `socio`
-> aparece solo si la cuenta está vinculada a un socio de BC01.
+Devuelve la cuenta autenticada con sus códigos internos y, si tiene, el socio de
+negocio (BC01) vinculado con su snapshot completo. La respuesta, sus campos y
+sus errores están en [Perfil del usuario](/api-reference/perfil/).
 
 ### PATCH /api/auth/perfil/codigos
 
