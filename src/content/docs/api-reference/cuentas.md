@@ -31,7 +31,7 @@ Content-Type: application/json
 >
 > `email` es **opcional** y **no es único** (varias cuentas pueden compartir casilla). Si viene, se valida el formato (máximo 255). Vacío o solo espacios se trata como ausente: la cuenta queda sin correo (`null`). Una cuenta sin correo no puede recuperar su password por sí misma (ver [`forgot-password`](/api-reference/auth/#post-apiauthforgot-password)); se recupera con un [reset administrativo](/api-reference/credenciales/#post-apiadmincuentasidreset-password).
 >
-> `documentoIdentidad` es **opcional** (string, máximo 50 caracteres). Los demás campos (`nombreUsuario`, `nombreCompleto`, `tipoCuenta`) son obligatorios.
+> `documentoIdentidad` es **opcional** (string, máximo 50 caracteres). Los demás campos (`nombreUsuario`, `nombreCompleto`, `tipoCuenta`) son obligatorios. Si el alta trae un socio de negocio (`socioExternoId` + `numeroDocumento`), el `documentoIdentidad` de la cuenta queda igual al `numeroDocumento` del socio, aunque se haya enviado otro. Al revés, `numeroDocumento`, `tipoSocio` o `socioSnapshot` sin `socioExternoId` responden `422 AUTH_SOCIO_DATOS_INVALIDOS` y la cuenta no se crea.
 
 **Campos opcionales adicionales:**
 
@@ -88,6 +88,16 @@ Authorization: Bearer <jwt>
 | `estado` | — | `activo` / `suspendido` / `inactivo` | Filtro opcional. |
 | `tipoCuenta` | — | `interno` / `cliente` / `proveedor` | Filtro opcional. |
 | `busqueda` | — | string | Texto para buscar por email, nombre de usuario o nombre completo. |
+| `documentoIdentidad` | — | string (≤ 50) | **Buscar por DNI.** Coincidencia exacta con el documento de identidad de la cuenta, sin distinguir mayúsculas. Mientras la cuenta tiene socio vinculado, este documento es el del socio (ver abajo), así que alcanza con este filtro, tenga socio o no. |
+| `permiso` | — | string | Solo cuentas que poseen ese permiso (heredado de un rol con asignación activa). |
+| `socioExternoId` | — | entero > 0 | Id del socio en BC01. Como el mismo id se repite entre tipos, combinarlo con `tipoSocio`. |
+| `tipoSocio` | — | `empleado` / `cliente` / `proveedor` | Tipo del socio vinculado. |
+| `socioDocumento` | — | string alfanumérico (≤ 50) | Documento del **vínculo** con el socio. Para buscar por DNI preferir `documentoIdentidad`, que también encuentra cuentas sin socio. |
+| `conSocio` | — | `true` / `false` | `true`: solo cuentas con socio vinculado; `false`: solo sin socio. |
+
+Los filtros se combinan con AND.
+
+> **Documento de identidad y socio de negocio.** El `documentoIdentidad` de la cuenta es el DNI por el que se busca. Cuando la cuenta tiene un socio de BC01 vinculado, ese campo **se sincroniza solo** con el `numeroDocumento` del socio: al crear la cuenta con socio, al vincular y al cambiar de socio, la cuenta toma el documento del socio (pisa el que tuviera). Mientras hay socio, `PATCH /api/admin/cuentas/:id` no permite cambiar el documento a mano. Al quitar el socio, el documento se limpia si todavía era el del socio.
 
 **Response 200:**
 
@@ -161,9 +171,11 @@ Actualiza email, nombre o documento de identidad. Requiere `auth:account:write`.
 
 > `email`: **ausente** = no se toca; **`null` o vacío** = se quita el correo; **string** = se cambia (valida formato, no unicidad). Todo cambio real del correo —incluido agregarlo o quitarlo— queda auditado como `email_cambiado` con `{ anterior, nuevo }` (`anterior: null` al agregarlo, `nuevo: null` al quitarlo).
 
+> `documentoIdentidad`: si la cuenta tiene socio vinculado, este campo **lo define el socio** y no se edita a mano: enviar otro valor (o `null`) responde `409 AUTH_DOCUMENTO_GESTIONADO_POR_SOCIO`. Para cambiarlo hay que cambiar o quitar el socio. Reenviar el mismo documento del socio (por ejemplo, un formulario que manda todos los campos) no falla: se ignora. Sin socio, se edita libremente.
+
 **Response 204** (sin body).
 
-**Errores:** `404` `AUTH_CUENTA_NO_ENCONTRADA`, `409` `AUTH_CUENTA_INACTIVA`.
+**Errores:** `404` `AUTH_CUENTA_NO_ENCONTRADA`, `409` `AUTH_CUENTA_INACTIVA`, `409` `AUTH_DOCUMENTO_GESTIONADO_POR_SOCIO` (cambio de documento con socio vinculado).
 
 ## PATCH /api/admin/cuentas/:id/codigos
 
@@ -213,7 +225,7 @@ Requiere `auth:account:write`.
 ```
 
 - `socioExternoId` (obligatorio): id del socio en BC01. Referencia para sus endpoints, **no identidad**: el mismo número se repite entre las tablas de personal, cliente y proveedor.
-- `numeroDocumento` (obligatorio): DNI, RUC o documento extranjero, solo letras y números, hasta 50. Junto con `tipoSocio` es la **identidad** del vínculo. Se guarda normalizado y es lo que viaja en el token como `socioDocumento`.
+- `numeroDocumento` (obligatorio): DNI, RUC o documento extranjero, solo letras y números, hasta 50. Junto con `tipoSocio` es la **identidad** del vínculo. Se guarda normalizado y es lo que viaja en el token como `socioDocumento`. Además pasa a ser el `documentoIdentidad` de la cuenta (pisa el que tuviera), para que la cuenta se encuentre con el filtro `documentoIdentidad` del listado.
 - `tipoSocio` (opcional): `empleado` \| `cliente` \| `proveedor` (default `empleado`).
 - `socioSnapshot` (opcional): objeto de BC01 capturado al vincular. De él salen `socioNombre` y `socioCuentas` del token. Se guarda solo con una lista blanca de campos. Si trae documento o tipo (`PERSONAL` → `empleado`, `CLIENTE` → `cliente`, `PROVEEDOR` → `proveedor`), tienen que coincidir con los del vínculo; un tipo desconocido se rechaza.
 
