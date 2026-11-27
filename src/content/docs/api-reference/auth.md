@@ -281,3 +281,39 @@ Content-Type: application/json
 | 401 | `AUTH_CREDENCIALES_INVALIDAS` | La contraseña actual es incorrecta (mensaje genérico). |
 | 422 | `AUTH_PASSWORD_NO_CUMPLE_POLITICA` | La nueva contraseña no cumple la política (mínimo 8 chars). |
 | 401 | `COMUN_NO_AUTENTICADO` | Falta o es inválido el Bearer. |
+
+### PATCH /api/auth/perfil/email
+
+Registra o cambia el correo de la cuenta autenticada. **Solo acepta correos
+`@transporteshagemsa.com`** (la restricción no aplica al endpoint admin
+`PATCH /api/auth/cuentas/:id`).
+
+Si la cuenta **ya tiene correo**, exige `passwordActual`: quien controla el
+correo puede recuperar la contraseña, así que la sesión sola no basta. Si no
+tiene correo, `passwordActual` se omite. Reenviar el mismo correo no hace nada.
+El email viaja en el JWT: refrescar el token tras un cambio exitoso.
+
+**Request:**
+
+```http
+PATCH /api/auth/perfil/email
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{ "email": "jperez@transporteshagemsa.com", "passwordActual": "Segura123" }
+```
+
+**Response 204** (sin body). Cada cambio real queda auditado como
+`email_cambiado` con `via: "self_service"`.
+
+**Errores:**
+
+| HTTP | `codigo` | Cuándo |
+|---|---|---|
+| 400 | `AUTH_PASSWORD_ACTUAL_REQUERIDA` | La cuenta ya tiene correo y no se envió `passwordActual`. |
+| 401 | `AUTH_CREDENCIALES_INVALIDAS` | La contraseña actual es incorrecta (mensaje genérico). |
+| 404 | `AUTH_CREDENCIAL_NO_ENCONTRADA` | La cuenta tiene correo pero nunca tuvo contraseña. |
+| 409 | `AUTH_CUENTA_INACTIVA` | La cuenta está inactiva. |
+| 422 | `AUTH_EMAIL_FUERA_DE_DOMINIO` | El correo no es `@transporteshagemsa.com`. |
+| 422 | `COMUN_VALIDACION_FALLIDA` | `email` con formato inválido. |
+| 401 | `COMUN_NO_AUTENTICADO` | Falta o es inválido el Bearer. |

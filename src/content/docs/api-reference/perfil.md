@@ -241,6 +241,6 @@ El contenido de cada clave no se valida: se guarda con la estructura que traiga.
 
 ## Relacionados
 
-- [`PATCH /api/auth/perfil/codigos` y `PATCH /api/auth/perfil/password`](/api-reference/auth/#perfil-self-service)
+- [`PATCH /api/auth/perfil/codigos`, `PATCH /api/auth/perfil/password` y `PATCH /api/auth/perfil/email`](/api-reference/auth/#perfil-self-service)
 - [`GET /api/admin/cuentas/:id`](/api-reference/cuentas/) — mismo formato para cualquier cuenta (admin).
 - [Datos del usuario en el token](/integracion/datos-del-usuario/)
